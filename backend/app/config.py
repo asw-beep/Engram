@@ -23,7 +23,8 @@ class Settings(BaseSettings):
     llm_timeout_seconds: float = 60.0
     retry_wait_seconds: float = 1.0
 
-    evidence_min_score: float = 0.30
+    # Calibrated with BGE-M3 on 10 smoke questions (docs/phase-1-smoke-results.md).
+    evidence_min_score: float = 0.50
     max_chunk_tokens: int = 512
     chunk_overlap_tokens: int = 50
     retrieval_limit: int = 20

@@ -13,6 +13,8 @@ from markdown_it.token import Token
 from app.ingestion.types import ParsedDocument, ParsedSection, ParseError
 
 _MARKDOWN = MarkdownIt("commonmark")
+# A heading ID such as "## Pod phase {#pod-phase}", used by Hugo and kramdown.
+_HEADING_ANCHOR = re.compile(r"\s*\{#[\w.:-]+\}$")
 # The same line breaks markdown-it normalises, so line numbers agree with its token maps.
 _LINE_BREAK = re.compile(r"\r\n?|\n")
 
@@ -60,7 +62,7 @@ def _headings(lines: list[str]) -> list[_Heading]:
         level = int(token.tag[1:])
         while stack and stack[-1][0] >= level:
             stack.pop()
-        stack.append((level, _plain_text(tokens[index + 1])))
+        stack.append((level, _HEADING_ANCHOR.sub("", _plain_text(tokens[index + 1]))))
         headings.append(_Heading(tuple(title for _, title in stack), token.map[0], token.map[1]))
     return headings
 

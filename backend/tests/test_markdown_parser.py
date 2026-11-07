@@ -47,3 +47,13 @@ def test_empty_file_raises_parse_error():
 def test_unsupported_extension_raises_parse_error():
     with pytest.raises(ParseError, match="unsupported"):
         parse_file("a.txt", b"x")
+
+
+def test_heading_anchor_is_left_out_of_the_title():
+    doc = parse_file("a.md", b"# Pod phase {#pod-phase}\nx\n## `Waiting` {#waiting}\ny\n")
+    assert [s.heading_path for s in doc.sections] == [("Pod phase",), ("Pod phase", "Waiting")]
+
+
+def test_braces_inside_a_title_are_kept():
+    doc = parse_file("a.md", b"# Using {name} in templates\nx\n")
+    assert doc.sections[0].heading_path == ("Using {name} in templates",)

@@ -1,0 +1,10 @@
+{"question": "What is a Pod in Kubernetes, and what does it contain?", "expects": "answered"}
+{"question": "What phases can a Pod be in during its lifecycle?", "expects": "answered"}
+{"question": "How does a Deployment roll out a new version of an application?", "expects": "answered"}
+{"question": "How does a StatefulSet give each Pod a stable network identity?", "expects": "answered"}
+{"question": "When should I use a DaemonSet?", "expects": "answered"}
+{"question": "How does a Service decide which Pods receive its traffic?", "expects": "answered"}
+{"question": "What are the ways a Pod can use a ConfigMap?", "expects": "answered"}
+{"question": "How does kube-scheduler choose a node for a Pod?", "expects": "answered"}
+{"question": "What is a good recipe for sourdough bread?", "expects": "insufficient_evidence"}
+{"question": "Who won the 1998 FIFA World Cup?", "expects": "insufficient_evidence"}

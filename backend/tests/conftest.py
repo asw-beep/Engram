@@ -49,7 +49,9 @@ SEEDED_TABLES = {"tenants", "sources"}
 
 @pytest.fixture
 def settings():
-    return Settings(_env_file=None, retry_wait_seconds=0)
+    # FakeEmbedder's bag-of-words scores run lower than BGE-M3's, so the tests keep their own
+    # evidence cutoff instead of the default calibrated on the real model (Task 14).
+    return Settings(_env_file=None, retry_wait_seconds=0, evidence_min_score=0.30)
 
 
 @pytest.fixture
