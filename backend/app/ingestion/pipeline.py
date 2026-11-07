@@ -1,14 +1,13 @@
-"""run_ingestion: fetch, compare, parse, chunk and save each file of a job (spec section 5).
+"""run_ingestion: the per-file steps of spec section 5, from fetching to publishing.
 
-Embedding and publishing come later, so for now every processed file leaves its chunks
-waiting and a job with any processed file ends `awaiting_embedding`.
+Saving a file's version and chunks commits first. Embedding and publishing come after, so a
+failure there leaves the old version searchable and a retry resumes at embedding.
 """
 
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import PurePosixPath
-from typing import Any
 from uuid import UUID, uuid4, uuid5
 
 from sqlalchemy import func, select, update
@@ -17,10 +16,14 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.config import Settings
 from app.db.constants import OPEN_JOB_STATUSES, JobStatus
 from app.db.models import Chunk, Document, DocumentVersion, IngestionJob, Source
+from app.db.vector_index import IndexedPoint, VectorIndex, is_transient_qdrant_error
+from app.embedding.base import Embedder, EmbeddingOutOfMemory, embedding_text
+from app.embedding.batching import embed_in_batches
 from app.ingestion.chunking import chunk_document
 from app.ingestion.connectors.base import Connector, ConnectorError
 from app.ingestion.parsers import parse_file
 from app.ingestion.types import FetchedFile, ParseError
+from app.retrying import retry_transient
 from app.storage.files import FileStore, content_hash
 
 logger = logging.getLogger(__name__)
@@ -28,12 +31,16 @@ logger = logging.getLogger(__name__)
 PROCESSED, SKIPPED, FAILED = "processed", "skipped", "failed"
 
 
+class PublishError(Exception):
+    """Embedding or publishing one file failed. The message is shown to the user."""
+
+
 @dataclass(frozen=True)
 class IngestionDeps:
     session_factory: sessionmaker[Session]
     file_store: FileStore
-    embedder: Any  # the Embedder protocol; only count_tokens is used until publishing exists
-    index: Any  # the vector index, used once publishing exists
+    embedder: Embedder
+    index: VectorIndex
     connector_for: Callable[[Source, IngestionJob], Connector]
     settings: Settings
 
@@ -50,6 +57,55 @@ def run_ingestion(job_id: UUID, deps: IngestionDeps) -> None:
             session.rollback()
             errors = [*job.errors, {"path": "", "reason": "internal error"}]
             _finish(session, job, JobStatus.FAILED, job.file_counts, errors)
+
+
+def publish_version(
+    session: Session,
+    version: DocumentVersion,
+    vectors: dict[UUID, list[float]],
+    index: VectorIndex,
+    model_id: str,
+    retry_wait: float = 1.0,
+) -> None:
+    """Spec step 7: add the version's points, make it current, then drop the old points."""
+    document = session.get(Document, version.document_id)
+    chunk_ids = session.scalars(
+        select(Chunk.id).where(Chunk.document_version_id == version.id).order_by(Chunk.position)
+    ).all()
+    points = [
+        IndexedPoint(
+            chunk_id=chunk_id,
+            vector=vectors[chunk_id],
+            tenant_id=version.tenant_id,
+            document_id=document.id,
+            document_version_id=version.id,
+            allowed_principals=list(document.allowed_principals),
+        )
+        for chunk_id in chunk_ids
+    ]
+    retry_transient(lambda: index.upsert(points), is_transient_qdrant_error, wait_base=retry_wait)
+
+    old_version_id = document.current_version_id
+    document.current_version_id = version.id
+    session.execute(
+        update(Chunk)
+        .where(Chunk.document_version_id == version.id)
+        .values(embedding_model=model_id, embedded_at=func.now())
+    )
+    session.commit()
+
+    if old_version_id is not None and old_version_id != version.id:
+        try:
+            retry_transient(
+                lambda: index.delete_version(old_version_id),
+                is_transient_qdrant_error,
+                wait_base=retry_wait,
+            )
+        except Exception:
+            # Search rechecks the current version, so stale points are never shown.
+            logger.warning(
+                "Could not remove points of old version %s", old_version_id, exc_info=True
+            )
 
 
 def _claim(session: Session, job_id: UUID) -> IngestionJob | None:
@@ -70,8 +126,10 @@ def _claim(session: Session, job_id: UUID) -> IngestionJob | None:
 
 
 def _run(session: Session, job: IngestionJob, deps: IngestionDeps) -> None:
+    defer_embedding = bool(job.input.get("defer_embedding", False))
     counts = _zero_counts()
     errors: list[dict[str, str]] = []
+    waiting = False
     connector = deps.connector_for(session.get(Source, job.source_id), job)
     try:
         items = list(connector.list_items())
@@ -82,8 +140,14 @@ def _run(session: Session, job: IngestionJob, deps: IngestionDeps) -> None:
         for item in items:
             fetched = connector.fetch(item)
             try:
-                outcome = _ingest_file(session, job, fetched, deps)
-            except ParseError as error:
+                outcome, version_id = _save_file(session, job, fetched, deps)
+                session.commit()
+                if version_id is not None and defer_embedding:
+                    _mark_waiting(session, version_id)
+                    waiting = True
+                elif version_id is not None:
+                    _embed_and_publish(session, version_id, deps)
+            except (ParseError, PublishError) as error:
                 session.rollback()
                 outcome = FAILED
                 errors.append({"path": item.path, "reason": str(error)})
@@ -98,13 +162,13 @@ def _run(session: Session, job: IngestionJob, deps: IngestionDeps) -> None:
         return
     finally:
         connector.close()
-    _finish(session, job, _final_status(counts), counts, errors)
+    _finish(session, job, _final_status(counts, waiting), counts, errors)
 
 
-def _ingest_file(
+def _save_file(
     session: Session, job: IngestionJob, fetched: FetchedFile, deps: IngestionDeps
-) -> str:
-    """Save one file's version and chunks, unless that content is already saved."""
+) -> tuple[str, UUID | None]:
+    """Spec steps 2 to 5. Returns the outcome and the version still to publish, if any."""
     item = fetched.item
     digest = content_hash(fetched.content)
     document = session.scalars(
@@ -123,8 +187,10 @@ def _ingest_file(
             )
         ).one_or_none()
         if version_id is not None:
-            # Published already: skip. Saved but not published: resume at embedding.
-            return SKIPPED if version_id == document.current_version_id else PROCESSED
+            if version_id == document.current_version_id:
+                return SKIPPED, None
+            # Saved before but not current, such as a revert or an unfinished job.
+            return PROCESSED, version_id
 
     storage_key = item.storage_key or deps.file_store.put(job.tenant_id, fetched.content)
     drafts = chunk_document(
@@ -169,13 +235,48 @@ def _ingest_file(
         )
         for draft in drafts
     )
-    return PROCESSED
+    return PROCESSED, version.id
 
 
-def _final_status(counts: dict[str, int]) -> JobStatus:
-    if counts[PROCESSED]:
+def _embed_and_publish(session: Session, version_id: UUID, deps: IngestionDeps) -> None:
+    """Spec steps 6 and 7. Every chunk is embedded, because old points may be gone."""
+    version = session.get(DocumentVersion, version_id)
+    chunks = session.scalars(
+        select(Chunk).where(Chunk.document_version_id == version_id).order_by(Chunk.position)
+    ).all()
+    texts = [embedding_text(tuple(chunk.heading_path), chunk.content) for chunk in chunks]
+    try:
+        vectors = embed_in_batches(deps.embedder, texts, deps.settings.embedding_batch_size)
+    except EmbeddingOutOfMemory as error:
+        raise PublishError("ran out of memory while embedding, even one chunk at a time") from error
+    try:
+        publish_version(
+            session,
+            version,
+            {chunk.id: vector for chunk, vector in zip(chunks, vectors, strict=True)},
+            deps.index,
+            deps.embedder.model_id,
+            retry_wait=deps.settings.retry_wait_seconds,
+        )
+    except Exception as error:
+        logger.warning("Publishing version %s failed", version_id, exc_info=True)
+        raise PublishError("could not save vectors to Qdrant") from error
+
+
+def _mark_waiting(session: Session, version_id: UUID) -> None:
+    """A deferred version's chunks wait for export, including ones embedded before."""
+    session.execute(
+        update(Chunk)
+        .where(Chunk.document_version_id == version_id, Chunk.embedded_at.is_not(None))
+        .values(embedded_at=None)
+    )
+    session.commit()
+
+
+def _final_status(counts: dict[str, int], waiting: bool) -> JobStatus:
+    if waiting:
         return JobStatus.AWAITING_EMBEDDING
-    if not counts[SKIPPED]:
+    if not counts[PROCESSED] and not counts[SKIPPED]:
         return JobStatus.FAILED
     return JobStatus.PARTIAL if counts[FAILED] else JobStatus.SUCCEEDED
 

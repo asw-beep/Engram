@@ -10,9 +10,10 @@ router = APIRouter()
 
 def _stores_available(request: Request) -> bool:
     try:
-        with request.app.state.services.session_factory() as session:
+        services = request.app.state.services
+        with services.session_factory() as session:
             session.execute(text("SELECT 1"))
-        request.app.state.qdrant.get_collections()
+        services.index.client.get_collections()
     except Exception:
         logger.warning("Health check failed", exc_info=True)
         return False

@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     llm_model: str = "nvidia/nemotron-3.5-super-vl:free"
     llm_fallback_model: str = "google/gemma-4-31b-it:free"
     llm_timeout_seconds: float = 60.0
+    retry_wait_seconds: float = 1.0
 
     evidence_min_score: float = 0.30
     max_chunk_tokens: int = 512

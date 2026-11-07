@@ -2,6 +2,7 @@ import os
 
 os.environ["HF_HUB_OFFLINE"] = "1"
 
+from contextlib import contextmanager  # noqa: E402
 from dataclasses import fields, replace  # noqa: E402
 from pathlib import Path  # noqa: E402
 from uuid import uuid4  # noqa: E402
@@ -10,6 +11,7 @@ import pytest  # noqa: E402
 from alembic import command  # noqa: E402
 from alembic.config import Config  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
+from qdrant_client import QdrantClient, models  # noqa: E402
 from sqlalchemy import create_engine, delete, func, select, text, update  # noqa: E402
 from sqlalchemy.engine import make_url  # noqa: E402
 
@@ -29,8 +31,9 @@ from app.db.models import (  # noqa: E402
     Source,
     Tenant,
 )
+from app.db.vector_index import IndexedPoint, VectorIndex  # noqa: E402
 from app.ingestion.connectors.upload import UploadConnector  # noqa: E402
-from app.ingestion.jobs import create_job  # noqa: E402
+from app.ingestion.jobs import create_job, retry_job  # noqa: E402
 from app.ingestion.pipeline import IngestionDeps, run_ingestion  # noqa: E402
 from app.main import create_app  # noqa: E402
 from app.services import Services  # noqa: E402
@@ -44,7 +47,7 @@ SEEDED_TABLES = {"tenants", "sources"}
 
 @pytest.fixture
 def settings():
-    return Settings(_env_file=None)
+    return Settings(_env_file=None, retry_wait_seconds=0)
 
 
 @pytest.fixture
@@ -177,12 +180,12 @@ def store(tmp_path):
 
 
 @pytest.fixture
-def deps(session_factory, store, settings):
+def deps(session_factory, store, settings, index):
     return IngestionDeps(
         session_factory=session_factory,
         file_store=store,
         embedder=FakeEmbedder(),
-        index=None,
+        index=index,
         connector_for=lambda source, job: UploadConnector(store, job.input.get("uploads", [])),
         settings=settings,
     )
@@ -276,3 +279,83 @@ def other_tenant(session):
     session.add(Source(tenant_id=tenant.id, type="upload", name="Uploads"))
     session.commit()
     return tenant
+
+
+@pytest.fixture(scope="session")
+def test_collection():
+    """One Qdrant collection for the whole run, deleted at the end."""
+    settings = Settings(_env_file=None)
+    client = QdrantClient(url=settings.qdrant_url, check_compatibility=False)
+    vector_index = VectorIndex(client, f"test_{uuid4().hex}", settings.embedding_dimension)
+    vector_index.ensure_collection()
+    yield vector_index
+    client.delete_collection(vector_index.collection)
+    client.close()
+
+
+@pytest.fixture
+def index(test_collection):
+    """The real Qdrant test collection, emptied before each test."""
+    test_collection.client.delete(
+        test_collection.collection,
+        points_selector=models.FilterSelector(filter=models.Filter()),
+        wait=True,
+    )
+    return test_collection
+
+
+@pytest.fixture
+def point():
+    def make(tenant, principals):
+        return IndexedPoint(
+            chunk_id=uuid4(),
+            vector=[1.0] + [0.0] * 1023,
+            tenant_id=tenant,
+            document_id=uuid4(),
+            document_version_id=uuid4(),
+            allowed_principals=list(principals),
+        )
+
+    return make
+
+
+@pytest.fixture
+def published_job(ingest):
+    return ingest({"guide.md": b"# A\nhello\n"})
+
+
+@pytest.fixture
+def fail_upserts(index, monkeypatch):
+    """Make the next `times` upserts raise a connection error, which counts as transient."""
+
+    @contextmanager
+    def failing(times):
+        real_upsert = index.upsert
+        remaining = [times]
+
+        def upsert(points):
+            if remaining[0] > 0:
+                remaining[0] -= 1
+                raise ConnectionError("Qdrant is unavailable (test)")
+            return real_upsert(points)
+
+        monkeypatch.setattr(index, "upsert", upsert)
+        try:
+            yield
+        finally:
+            monkeypatch.setattr(index, "upsert", real_upsert)
+
+    return failing
+
+
+@pytest.fixture
+def retry(session, deps):
+    """Reset a job to pending as the retry route does, run it, and return it refreshed."""
+
+    def run(job):
+        retry_job(session, job)
+        run_ingestion(job.id, deps)
+        session.refresh(job)
+        return job
+
+    return run

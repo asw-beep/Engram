@@ -3,7 +3,6 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from qdrant_client import QdrantClient
 
 from app.api import health, jobs, sources
 from app.config import Settings, get_settings
@@ -24,12 +23,16 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
             interrupted = mark_interrupted_jobs(session)
         if interrupted:
             logger.warning("Marked %d unfinished ingestion jobs as interrupted", interrupted)
+        try:
+            services.index.ensure_collection()
+        except Exception:
+            # Keep starting, so /api/health can report that Qdrant is unavailable.
+            logger.warning("Could not prepare the Qdrant collection at startup", exc_info=True)
         yield
 
     app = FastAPI(title="Engram", lifespan=lifespan)
     app.state.settings = settings
     app.state.services = services
-    app.state.qdrant = QdrantClient(url=settings.qdrant_url, check_compatibility=False)
     app.include_router(health.router)
     app.include_router(sources.router)
     app.include_router(jobs.router)
