@@ -6,7 +6,7 @@ Engram is a multi-tenant, permission-aware retrieval-augmented generation (RAG) 
 
 ## Getting started
 
-You need Docker, Python 3.12 and [uv](https://docs.astral.sh/uv/).
+You need Docker, Python 3.12, [uv](https://docs.astral.sh/uv/) and Node.js 20 or later.
 
 Start Postgres and Qdrant from the repository root:
 
@@ -25,3 +25,15 @@ Then run these commands from `backend/`:
 | Lint | `uv run ruff check .` |
 
 Tests use the real Postgres and Qdrant services, so start them first.
+
+### Frontend
+
+Run these commands from `frontend/`. The development server forwards `/api` requests to the API on port 8000, so start the API first.
+
+| Task | Command |
+|---|---|
+| Install dependencies | `npm install` |
+| Run the app on port 3000 | `npm run dev` |
+| Run all tests | `npm test` |
+| Run one test file | `npx vitest run components/AnswerView.test.tsx` |
+| Lint | `npm run lint` |
