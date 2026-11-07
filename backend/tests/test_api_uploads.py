@@ -1,9 +1,11 @@
 from uuid import uuid4
 
+import pytest
 from sqlalchemy import select
 
 from app.db.constants import DEFAULT_UPLOAD_SOURCE_ID
 from app.db.models import Document, IngestionJob, Source
+from tests.documents import sample_docx, sample_pdf
 
 
 def upload(client, name="guide.md", body=b"# A\nx\n", source=DEFAULT_UPLOAD_SOURCE_ID):
@@ -63,3 +65,9 @@ def test_second_open_job_is_a_conflict(client, make_job):
     response = upload(client)
     assert response.status_code == 409
     assert "job_id" in response.json()["detail"]
+
+
+@pytest.mark.parametrize("name, build", [("a.pdf", sample_pdf), ("a.docx", sample_docx)])
+def test_pdf_and_docx_uploads_finish(client, name, build):
+    job_id = upload(client, name=name, body=build()).json()["job_id"]
+    assert client.get(f"/api/jobs/{job_id}").json()["status"] == "succeeded"
