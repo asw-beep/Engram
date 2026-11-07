@@ -1,6 +1,6 @@
 # Engram Phase 1 Implementation Plan
 
-**Goal:** Build a chat app that ingests engineering documents and answers questions with validated citations, running locally and on one AWS server.
+**Goal:** Build a chat app that ingests engineering documents and answers questions with validated citations, running locally both in development and in the production containers. The AWS server (Task 19) was deferred to Phase 4 on 2026-11-07.
 
 **Architecture:** A modular FastAPI monolith with separate ingestion, retrieval and generation modules, backed by PostgreSQL (canonical) and Qdrant (rebuildable vector projection). Ingestion runs through a plain `run_ingestion(job_id)` function on background tasks. A Next.js app provides the Ask and Sources screens.
 
@@ -54,7 +54,7 @@ These details came out of planning and don't change the approved design:
 |---|---|
 | Before Task 2 | Create an OpenRouter API key and put it in `backend/.env` as `OPENROUTER_API_KEY` |
 | Task 17 | Run the Kaggle notebook, which needs a Kaggle account with a verified phone number |
-| Before Task 19 | Confirm your AWS account and approve creating paid resources |
+| Before Task 19 (deferred to Phase 4) | Confirm your AWS account and approve creating paid resources |
 
 ## File Structure
 
@@ -86,7 +86,7 @@ backend/
   tests/                          conftest.py, fakes.py, fixtures/, test_*.py
 frontend/                         Next.js app, components/, lib/api.ts
 notebooks/kaggle_embed.ipynb
-deploy/                           Caddyfile, scripts, systemd units, runbook.md
+deploy/                           Caddyfile (scripts, systemd units and runbook.md come in Phase 4)
 ```
 
 ---
@@ -1636,7 +1636,9 @@ git add docker-compose.prod.yml deploy .env.prod.example backend frontend
 git commit -m "feat: add production containers"
 ```
 
-### Task 19: AWS deployment
+### Task 19: AWS deployment (deferred to Phase 4)
+
+**Deferred** on 2026-11-07 by the owner's decision, so Phase 1 ends with Task 18. Task 18 verified the production stack on the laptop, and the results are in `docs/phase-1-smoke-results.md`. The steps below are the starting point for Phase 4 and haven't been run.
 
 **Requires:** the owner's approval before any AWS resource is created, because this starts billing or uses credits.
 

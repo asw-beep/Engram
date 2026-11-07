@@ -1,20 +1,20 @@
 # Engram Phase 1: Foundation and Basic RAG
 
-**Status:** Approved on 2026-11-07.
+**Status:** Approved on 2026-11-07. Amended on 2026-11-07: the owner moved the AWS server to Phase 4, so Phase 1 ends with production containers verified on the laptop (§9, §11).
 **Parent document:** `Plan.md`. § references point to it.
 
 This spec covers Phase 1 only. Each later phase gets its own spec and implementation plan.
 
 ## 1. Goal
 
-Load a set of engineering documents, ask a question in a simple chat page, and get an answer with citations to the real sources, running locally and on one AWS server.
+Load a set of engineering documents, ask a question in a simple chat page, and get an answer with citations to the real sources, running locally both in development and in the production containers. The production containers are ready for one AWS server, which Phase 4 sets up.
 
 ### Agreed understanding
 
 **Decided by the project owner:**
 
 - The Phase 1 demo includes a simple chat page, not only an API.
-- Phase 1 also runs on AWS, at low cost.
+- Phase 1 also runs on AWS, at low cost. Changed on 2026-11-07: the AWS server is deferred to Phase 4.
 - OpenRouter's free models provide the LLM.
 - Kaggle T4 GPUs are available for bulk embedding.
 - The code uses plain libraries in clear modules, not LlamaIndex or LangChain.
@@ -31,7 +31,7 @@ Load a set of engineering documents, ask a question in a simple chat page, and g
 | Topic | `Plan.md` | This spec |
 |---|---|---|
 | Frontend | Required by §16, but scheduled in no §11 phase | Simple chat page in Phase 1 |
-| AWS deployment | Phase 4 | Basic single-server deployment in Phase 1 |
+| AWS deployment | Phase 4 | Production containers in Phase 1, verified on the laptop. The AWS server stays in Phase 4 |
 | Object storage | S3 or MinIO | Disk volume behind `storage/`, because Phase 1 has no need for an extra service |
 | File types | §4.1 lists OpenAPI and code-related sources | `.md`, `.pdf` and `.docx` only |
 
@@ -39,7 +39,7 @@ Source code and OpenAPI ingestion still need a phase. No phase in §11 schedules
 
 ## 2. Scope
 
-**In scope:** Markdown, PDF and DOCX ingestion from uploads and public GitHub repositories; structure-aware chunking; BGE-M3 dense embeddings; Qdrant search; grounded answers with validated citations; a two-screen web app; basic AWS deployment.
+**In scope:** Markdown, PDF and DOCX ingestion from uploads and public GitHub repositories; structure-aware chunking; BGE-M3 dense embeddings; Qdrant search; grounded answers with validated citations; a two-screen web app; production containers for a single server.
 
 **Out of scope:**
 
@@ -74,9 +74,9 @@ engram/
 │   └── tests/
 ├── frontend/             Next.js chat page
 ├── notebooks/            Kaggle embedding notebook
-├── deploy/               server scripts and runbook
+├── deploy/               Caddyfile (server scripts and runbook come in Phase 4)
 ├── docker-compose.yml        local Postgres and Qdrant
-└── docker-compose.prod.yml   all services on AWS
+└── docker-compose.prod.yml   all services in containers
 ```
 
 **Stack:** Python 3.12, `uv`, FastAPI, SQLAlchemy, Alembic, pytest, Next.js, TypeScript, PostgreSQL, Qdrant, Docker Compose, Caddy.
@@ -115,7 +115,7 @@ class LLMProvider(Protocol):
 | Environment | Runs in Docker | Runs outside Docker | Embedding device |
 |---|---|---|---|
 | Laptop | Postgres, Qdrant | API and frontend | CUDA |
-| AWS | Caddy, frontend, API, Postgres, Qdrant | Nothing | CPU |
+| Production containers (laptop in Phase 1, AWS in Phase 4) | Caddy, frontend, API, Postgres, Qdrant | Nothing | CPU |
 
 The laptop API runs through `uv` because that gives simpler GPU access on Windows.
 
@@ -295,6 +295,8 @@ Normal test runs never call OpenRouter and never download BGE-M3. A document con
 
 ## 9. AWS deployment
 
+**Deferred to Phase 4** on 2026-11-07, by the owner's decision. Phase 1 built the production containers (`docker-compose.prod.yml`) and verified them on the laptop. The design below is the starting point for Phase 4.
+
 **Server:** one `m7i-flex.large` (2 vCPU, 8 GiB) with 30 GB of gp3 storage, set up from a short runbook and scripts in `deploy/`. Terraform can wait for Phase 4. The region is a single setting chosen at deployment.
 
 **Security:**
@@ -334,7 +336,7 @@ Normal test runs never call OpenRouter and never download BGE-M3. A document con
 4. **Embeddings:** BGE-M3 in batches, publishing to Qdrant.
 5. **Question answering:** search, citations and the chat page, then recalibrate `EVIDENCE_MIN_SCORE` with real test questions.
 6. **More sources:** PDF, DOCX, the GitHub connector and the Kaggle route.
-7. **Deploy to AWS:** run the data sync and the smoke test on the server.
+7. **Production containers:** run the whole stack in containers on the laptop and check it end to end. The AWS server is deferred to Phase 4.
 
 Steps 1 to 5 give a working end-to-end demo, so step 6 can slip without breaking it.
 
@@ -348,6 +350,10 @@ Steps 1 to 5 give a working end-to-end demo, so step 6 can slip without breaking
 - A question with no supporting evidence returns `insufficient_evidence` without an LLM call.
 - A job can pause for Kaggle embedding and finish through `import-vectors`.
 - All automated tests pass, including tenant isolation.
+- The production stack starts with one command, publishes only Caddy's port, and answers a question with citations using the CPU, with every container under its memory limit.
+
+Moved to Phase 4 on 2026-11-07:
+
 - The app runs on AWS from the owner's IP address, and the server stops itself overnight.
 - The manual smoke test has run against the deployed app, with results recorded.
 

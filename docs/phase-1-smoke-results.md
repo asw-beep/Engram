@@ -2,6 +2,8 @@
 
 Run on 2026-11-07 on the development machine, with BGE-M3 on the local GPU and OpenRouter's free models. This is a smoke test of 10 questions, not the §10.5 evaluation. It shows that the pipeline works end to end and sets a first evidence cutoff. It doesn't measure Recall@5, faithfulness or p95 latency, which need the Phase 2 dataset.
 
+The last section, "Production containers", is a separate check of the full stack in containers, with BGE-M3 on the CPU.
+
 ## Corpus
 
 The corpus is 10 real Kubernetes concept pages from `kubernetes/website` at commit `df4b759d54d331622a0003d25e8f713852e98dae`, under `content/en/docs/concepts/`. None of them is synthetic. Each was renamed after its topic before upload, because uploads keep only the file name:
@@ -71,3 +73,34 @@ I asked "What phases can a Pod be in during its lifecycle?" on the Ask screen an
 - **Passage numbers in the answer text.** One answer said "Passage 1 also describes…". The prompt numbers passages for citation, and the model sometimes repeats that numbering in its prose. Tightening the prompt to keep numbers in markers only is a candidate fix.
 - **Hugo markup in snippets.** Shortcodes such as `{{< glossary_tooltip >}}` and `{{< param "version" >}}` stay in the chunk text and the citation snippets. Heading IDs such as `{#pod-phase}` are now removed from heading titles.
 - **Latency.** Answers took 2.8 to 32.4 seconds, with a median of about 7 seconds. Long answers take longest, because output tokens dominate. Eight questions are too few for a p95 figure.
+
+## Production containers
+
+Run on 2026-11-07 on the development machine with `docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build` (Task 18). The stack started from empty Postgres, Qdrant and file volumes. The API embeds on the CPU with `EMBEDDING_BATCH_SIZE=4` and `OMP_NUM_THREADS=2`. This replaces the AWS check, which moved to Phase 4.
+
+**Startup.** All five containers (`caddy`, `frontend`, `api`, `postgres`, `qdrant`) reached `healthy`. The API loaded BGE-M3 in the background in 19.5 seconds.
+
+**Exposure and routing.** Through Caddy on port 80, `/api/health` returned `{"status":"ok"}`, and `/` and `/sources` returned 200. `docker compose ps` showed a published port only for `caddy`, `80`. The API, frontend, Postgres and Qdrant have container ports only.
+
+**Upload.** `configmap.md` from the corpus above was uploaded through Caddy to the Uploads source. The job ended `succeeded`, with 1 processed and 0 failed, after 25.7 seconds. It made 12 chunks of 123 to 449 tokens (304 on average), and Qdrant holds 12 points.
+
+**Question.** "How can a Pod consume a ConfigMap?" was `answered` by `nvidia/nemotron-3.5-super-vl:free` with 5 citations, all to `configmap.md` (sections "ConfigMaps and Pods" and "Using ConfigMaps"). The query log records 8 passages, 3,151 input tokens, 723 output tokens and 6.6 seconds. The request took 6.9 seconds through Caddy. It used 1 OpenRouter request.
+
+**Memory** from `docker stats --no-stream` straight after the question:
+
+| Container | Used | Limit |
+|---|---:|---:|
+| `api` | 1.23 GiB | 4 GiB |
+| `qdrant` | 84 MiB | 1.5 GiB |
+| `postgres` | 47 MiB | 1 GiB |
+| `frontend` | 37 MiB | 512 MiB |
+| `caddy` | 11 MiB | 128 MiB |
+
+**Frontend on Node 24.** The frontend image was then rebuilt on `node:24-alpine`, which the plan specifies, in place of `node:22-alpine`. It returned to `healthy` on Node v24.22.2, and `/`, `/sources` and `/api/health` answered as before.
+
+**Limits of this check.**
+
+- The memory figures are one reading at rest, not the peak during embedding. The Task 2 measurement of 2.6 GB at batch size 4 is still the best peak estimate.
+- The containers had no CPU cap, and the laptop's CPU isn't the 2-vCPU `m7i-flex.large` from §9 of the spec. These timings don't predict the server's.
+- The question was asked through the API rather than the Ask screen. The Ask screen sends the same request through Caddy.
+- One question isn't a smoke test. Running `scripts/smoke.py` against a deployed server is part of the deferred AWS task.
