@@ -87,6 +87,35 @@ async function errorMessage(response: Response): Promise<string> {
   return `The server returned HTTP ${response.status}.`;
 }
 
+export function listSources(): Promise<Source[]> {
+  return request<Source[]>("/api/sources");
+}
+
+/** Start an ingestion job for the files and return its id. */
+export async function uploadFiles(
+  sourceId: string,
+  files: File[],
+  deferEmbedding: boolean,
+): Promise<string> {
+  const form = new FormData();
+  for (const file of files) form.append("files", file);
+  form.append("defer_embedding", String(deferEmbedding));
+  const accepted = await request<{ job_id: string }>(
+    `/api/sources/${encodeURIComponent(sourceId)}/documents`,
+    { method: "POST", body: form },
+  );
+  return accepted.job_id;
+}
+
+/** The newest 50 jobs, newest first. */
+export function listJobs(): Promise<Job[]> {
+  return request<Job[]>("/api/jobs");
+}
+
+export async function retryJob(id: string): Promise<void> {
+  await request(`/api/jobs/${encodeURIComponent(id)}/retry`, { method: "POST" });
+}
+
 export function askQuestion(question: string): Promise<QuestionResponse> {
   return request<QuestionResponse>("/api/questions", {
     method: "POST",
