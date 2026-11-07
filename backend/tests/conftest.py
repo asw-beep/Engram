@@ -2,7 +2,7 @@ import os
 
 os.environ["HF_HUB_OFFLINE"] = "1"
 
-from dataclasses import replace  # noqa: E402
+from dataclasses import fields, replace  # noqa: E402
 from pathlib import Path  # noqa: E402
 from uuid import uuid4  # noqa: E402
 
@@ -33,6 +33,7 @@ from app.ingestion.connectors.upload import UploadConnector  # noqa: E402
 from app.ingestion.jobs import create_job  # noqa: E402
 from app.ingestion.pipeline import IngestionDeps, run_ingestion  # noqa: E402
 from app.main import create_app  # noqa: E402
+from app.services import Services  # noqa: E402
 from app.storage.files import FileStore  # noqa: E402
 from tests.fakes import FailingConnector, FakeEmbedder  # noqa: E402
 
@@ -47,8 +48,9 @@ def settings():
 
 
 @pytest.fixture
-def client(settings):
-    return TestClient(create_app(settings))
+def client(settings, services):
+    """The app with fakes injected. Lifespan events don't run unless used as a context manager."""
+    return TestClient(create_app(settings, services))
 
 
 @pytest.fixture(scope="session")
@@ -257,3 +259,20 @@ def finish_job(session):
         session.commit()
 
     return finish
+
+
+@pytest.fixture
+def services(deps):
+    """The same collaborators as deps; llm and retriever stay None until those tasks."""
+    return Services(**{field.name: getattr(deps, field.name) for field in fields(deps)})
+
+
+@pytest.fixture
+def other_tenant(session):
+    """A second tenant with its own upload source."""
+    tenant = Tenant(name="Other")
+    session.add(tenant)
+    session.flush()
+    session.add(Source(tenant_id=tenant.id, type="upload", name="Uploads"))
+    session.commit()
+    return tenant
