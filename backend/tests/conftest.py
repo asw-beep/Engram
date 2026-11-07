@@ -39,7 +39,7 @@ from app.main import create_app  # noqa: E402
 from app.retrieval.dense import DenseRetriever  # noqa: E402
 from app.services import Services  # noqa: E402
 from app.storage.files import FileStore  # noqa: E402
-from tests.fakes import FailingConnector, FakeEmbedder  # noqa: E402
+from tests.fakes import FailingConnector, FakeEmbedder, FakeLLM  # noqa: E402
 from tests.tenants import TENANT_A, TENANT_B  # noqa: E402
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -267,11 +267,18 @@ def finish_job(session):
 
 
 @pytest.fixture
-def services(deps, retriever):
-    """The same collaborators as deps, plus the retriever; llm stays None until Task 10."""
+def services(deps, retriever, fake_llm):
+    """The same collaborators as deps, plus the retriever and the fake LLM."""
     return Services(
-        **{field.name: getattr(deps, field.name) for field in fields(deps)}, retriever=retriever
+        **{field.name: getattr(deps, field.name) for field in fields(deps)},
+        retriever=retriever,
+        llm=fake_llm,
     )
+
+
+@pytest.fixture
+def fake_llm():
+    return FakeLLM()
 
 
 @pytest.fixture

@@ -1,9 +1,10 @@
-"""Fakes for the slow or external parts: the embedding model and source connectors."""
+"""Fakes for the slow or external parts: the embedding model, source connectors and the LLM."""
 
 import hashlib
 import math
 import re
 
+from app.generation.base import GenerationRequest, GenerationResult
 from app.ingestion.connectors.base import ConnectorError
 from app.ingestion.types import FetchedFile, SourceItem
 
@@ -67,3 +68,31 @@ class ExplodingConnector:
 
     def close(self) -> None:
         self.closed = True
+
+
+class FakeLLM:
+    """Returns a set result or raises a set error, recording every request."""
+
+    def __init__(self, result=None, error=None):
+        self.result = result
+        self.error = error
+        self.calls = []
+
+    def returns(self, status, answer):
+        self.result = GenerationResult(
+            status=status, answer=answer, model="fake-model", input_tokens=10, output_tokens=5
+        )
+        self.error = None
+        return self
+
+    def raises(self, error):
+        self.error = error
+        return self
+
+    def generate(self, request: GenerationRequest) -> GenerationResult:
+        self.calls.append(request)
+        if self.error is not None:
+            raise self.error
+        if self.result is None:
+            raise AssertionError("FakeLLM was called without a result or an error set")
+        return self.result
