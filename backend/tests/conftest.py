@@ -32,14 +32,14 @@ from app.db.models import (  # noqa: E402
     Tenant,
 )
 from app.db.vector_index import IndexedPoint, VectorIndex  # noqa: E402
-from app.ingestion.connectors.upload import UploadConnector  # noqa: E402
 from app.ingestion.jobs import create_job, retry_job  # noqa: E402
 from app.ingestion.pipeline import IngestionDeps, run_ingestion  # noqa: E402
 from app.main import create_app  # noqa: E402
 from app.retrieval.dense import DenseRetriever  # noqa: E402
-from app.services import Services  # noqa: E402
+from app.services import Services, make_connector_for  # noqa: E402
 from app.storage.files import FileStore  # noqa: E402
 from tests.fakes import FailingConnector, FakeEmbedder, FakeLLM  # noqa: E402
+from tests.github import FakeGitHub, FakeRepo, tarball  # noqa: E402
 from tests.tenants import TENANT_A, TENANT_B  # noqa: E402
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -48,10 +48,15 @@ SEEDED_TABLES = {"tenants", "sources"}
 
 
 @pytest.fixture
-def settings():
+def settings(tmp_path):
     # FakeEmbedder's bag-of-words scores run lower than BGE-M3's, so the tests keep their own
     # evidence cutoff instead of the default calibrated on the real model (Task 14).
-    return Settings(_env_file=None, retry_wait_seconds=0, evidence_min_score=0.30)
+    return Settings(
+        _env_file=None,
+        retry_wait_seconds=0,
+        evidence_min_score=0.30,
+        download_dir=str(tmp_path / "downloads"),
+    )
 
 
 @pytest.fixture
@@ -184,15 +189,44 @@ def store(tmp_path):
 
 
 @pytest.fixture
-def deps(session_factory, store, settings, index):
+def fake_github():
+    return FakeGitHub()
+
+
+@pytest.fixture
+def deps(session_factory, store, settings, index, fake_github):
+    """The production connector dispatch, with GitHub answered by fake_github."""
     return IngestionDeps(
         session_factory=session_factory,
         file_store=store,
         embedder=FakeEmbedder(),
         index=index,
-        connector_for=lambda source, job: UploadConnector(store, job.input.get("uploads", [])),
+        connector_for=make_connector_for(store, fake_github.client(), settings),
         settings=settings,
     )
+
+
+@pytest.fixture
+def github_source(session):
+    """A GitHub source for o/r at branch main, including docs/**."""
+    config = {"repository": "o/r", "branch": "main", "include_paths": ["docs/**"]}
+    return _save(
+        session, Source(tenant_id=DEFAULT_TENANT_ID, type="github", name="o/r", config=config)
+    )
+
+
+@pytest.fixture
+def fake_repo(fake_github):
+    """o/r at commit abc on main: one included Markdown file, one excluded, one unsupported."""
+    archive = tarball(
+        {
+            "docs/a.md": b"# Sync\nThe sync retries failed requests three times.\n",
+            "docs/logo.png": b"not text",
+            "src/b.md": b"# Other\nThe sync retries failed requests three times.\n",
+        }
+    )
+    fake_github.serve("o/r", "main", "abc", archive)
+    return FakeRepo(question="Does the sync retry failed requests three times?")
 
 
 def _upload_job(session, input):

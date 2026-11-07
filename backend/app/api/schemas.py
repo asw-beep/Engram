@@ -2,11 +2,20 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class JobAccepted(BaseModel):
     job_id: UUID
+
+
+class GithubSourceIn(BaseModel):
+    """Checked further in the route, which normalises the repository and branch."""
+
+    name: str = Field(default="", max_length=200)
+    repository: str = Field(max_length=300)
+    branch: str = Field(default="main", max_length=250)
+    include_paths: list[str] = Field(default_factory=list, max_length=50)
 
 
 class SourceOut(BaseModel):

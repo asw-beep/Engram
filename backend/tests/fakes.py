@@ -5,7 +5,7 @@ import math
 import re
 
 from app.generation.base import GenerationRequest, GenerationResult
-from app.ingestion.connectors.base import ConnectorError
+from app.ingestion.connectors.base import ConnectorError, FileTooLarge
 from app.ingestion.types import FetchedFile, SourceItem
 
 _PUNCTUATION = re.compile(r"[^\w\s]")
@@ -68,6 +68,21 @@ class ExplodingConnector:
 
     def close(self) -> None:
         self.closed = True
+
+
+class OversizedFileConnector:
+    """Lists a file too large to fetch, then a good one."""
+
+    def list_items(self) -> list[SourceItem]:
+        return [SourceItem(path="big.md"), SourceItem(path="good.md")]
+
+    def fetch(self, item: SourceItem) -> FetchedFile:
+        if item.path == "big.md":
+            raise FileTooLarge("file is over 25 MB")
+        return FetchedFile(item, b"# A\nx\n")
+
+    def close(self) -> None:
+        pass
 
 
 class FakeLLM:

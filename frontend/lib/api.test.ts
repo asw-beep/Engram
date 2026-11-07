@@ -1,6 +1,6 @@
 import { afterEach, expect, test, vi } from "vitest";
 
-import { ApiError, uploadFiles } from "@/lib/api";
+import { ApiError, createGithubSource, syncSource, uploadFiles } from "@/lib/api";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -22,6 +22,24 @@ test("uploadFiles posts the files and the embedding choice as a form", async () 
   const form = init?.body as FormData;
   expect(form.getAll("files").map((file) => (file as File).name)).toEqual(["a.md", "b.md"]);
   expect(form.get("defer_embedding")).toBe("true");
+});
+
+test("createGithubSource posts the fields as JSON", async () => {
+  const created = { id: "g", type: "github", name: "o/r", config: {} };
+  const fetchMock = stubFetch(Response.json(created, { status: 201 }));
+  const body = { name: "", repository: "o/r", branch: "main", include_paths: ["docs/**"] };
+  expect(await createGithubSource(body)).toEqual(created);
+  const [url, init] = fetchMock.mock.calls[0];
+  expect([url, init?.method]).toEqual(["/api/sources", "POST"]);
+  expect(new Headers(init?.headers).get("content-type")).toBe("application/json");
+  expect(JSON.parse(init?.body as string)).toEqual(body);
+});
+
+test("syncSource starts a job and returns its id", async () => {
+  const fetchMock = stubFetch(Response.json({ job_id: "j2" }, { status: 202 }));
+  expect(await syncSource("g 1")).toBe("j2");
+  const [url, init] = fetchMock.mock.calls[0];
+  expect([url, init?.method]).toEqual(["/api/sources/g%201/sync", "POST"]);
 });
 
 test("an error detail object gives its message", async () => {

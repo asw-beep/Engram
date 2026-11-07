@@ -91,6 +91,31 @@ export function listSources(): Promise<Source[]> {
   return request<Source[]>("/api/sources");
 }
 
+export type GithubSourceInput = {
+  name: string;
+  repository: string;
+  branch: string;
+  include_paths: string[];
+};
+
+/** Add a GitHub repository as a source. Nothing is fetched until it is synced. */
+export function createGithubSource(body: GithubSourceInput): Promise<Source> {
+  return request<Source>("/api/sources", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+/** Start a job that reads the source's newest commit, and return the job's id. */
+export async function syncSource(id: string): Promise<string> {
+  const accepted = await request<{ job_id: string }>(
+    `/api/sources/${encodeURIComponent(id)}/sync`,
+    { method: "POST" },
+  );
+  return accepted.job_id;
+}
+
 /** Start an ingestion job for the files and return its id. */
 export async function uploadFiles(
   sourceId: string,

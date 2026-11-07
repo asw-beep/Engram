@@ -20,7 +20,7 @@ from app.db.vector_index import IndexedPoint, VectorIndex, is_transient_qdrant_e
 from app.embedding.base import Embedder, EmbeddingOutOfMemory, embedding_text
 from app.embedding.batching import embed_in_batches
 from app.ingestion.chunking import chunk_document
-from app.ingestion.connectors.base import Connector, ConnectorError
+from app.ingestion.connectors.base import Connector, ConnectorError, FileTooLarge
 from app.ingestion.parsers import parse_file
 from app.ingestion.types import FetchedFile, ParseError
 from app.retrying import retry_transient
@@ -138,8 +138,8 @@ def _run(session: Session, job: IngestionJob, deps: IngestionDeps) -> None:
             _finish(session, job, JobStatus.FAILED, counts, errors)
             return
         for item in items:
-            fetched = connector.fetch(item)
             try:
+                fetched = connector.fetch(item)
                 outcome, version_id = _save_file(session, job, fetched, deps)
                 session.commit()
                 if version_id is not None and defer_embedding:
@@ -147,7 +147,7 @@ def _run(session: Session, job: IngestionJob, deps: IngestionDeps) -> None:
                     waiting = True
                 elif version_id is not None:
                     _embed_and_publish(session, version_id, deps)
-            except (ParseError, PublishError) as error:
+            except (ParseError, PublishError, FileTooLarge) as error:
                 session.rollback()
                 outcome = FAILED
                 errors.append({"path": item.path, "reason": str(error)})

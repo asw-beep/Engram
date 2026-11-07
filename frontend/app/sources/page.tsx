@@ -2,9 +2,18 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import GithubSourceForm from "@/components/GithubSourceForm";
 import JobList from "@/components/JobList";
 import UploadForm from "@/components/UploadForm";
-import { ApiError, type Job, listJobs, listSources, retryJob, type Source } from "@/lib/api";
+import {
+  ApiError,
+  type Job,
+  listJobs,
+  listSources,
+  retryJob,
+  type Source,
+  syncSource,
+} from "@/lib/api";
 
 const POLL_MS = 3000;
 
@@ -45,14 +54,25 @@ export default function SourcesPage() {
     await refreshJobs();
   }
 
+  async function sync(id: string) {
+    setError(null);
+    try {
+      await syncSource(id);
+    } catch (failure) {
+      setError(describeError(failure));
+    }
+    await refreshJobs();
+  }
+
   const uploads = sources?.find((source) => source.type === "upload");
+  const sourceNames = Object.fromEntries((sources ?? []).map((source) => [source.id, source.name]));
 
   return (
     <main className="page">
       <h1 className="page-title">Sources</h1>
       <p className="lede">
-        Upload documents to make them searchable. Processing runs in the background, and this page
-        updates while a job is running.
+        Upload documents or connect a GitHub repository to make them searchable. Processing runs in
+        the background, and this page updates while a job is running.
       </p>
       {error && (
         <p className="notice error" role="alert">
@@ -76,8 +96,18 @@ export default function SourcesPage() {
       </section>
 
       <section className="section">
+        <h2>Connect a GitHub repository</h2>
+        <GithubSourceForm
+          onCreated={(source) => {
+            setError(null);
+            setSources((current) => [...(current ?? []), source]);
+          }}
+        />
+      </section>
+
+      <section className="section">
         <h2>Recent jobs</h2>
-        <JobList jobs={jobs} onRetry={(id) => void retry(id)} />
+        <JobList jobs={jobs} sourceNames={sourceNames} onRetry={(id) => void retry(id)} />
       </section>
 
       {sources && sources.length > 0 && (
@@ -85,8 +115,19 @@ export default function SourcesPage() {
           <h2>Connected sources</h2>
           <ul className="sources">
             {sources.map((source) => (
-              <li key={source.id}>
-                {source.name} <span className="hint">({source.type})</span>
+              <li key={source.id} className="source">
+                <span className="source-name">{source.name}</span>
+                <span className="source-detail">{describeSource(source)}</span>
+                {source.type === "github" && (
+                  <button
+                    type="button"
+                    className="small-button"
+                    aria-label={`Sync ${source.name}`}
+                    onClick={() => void sync(source.id)}
+                  >
+                    Sync
+                  </button>
+                )}
               </li>
             ))}
           </ul>
@@ -94,6 +135,15 @@ export default function SourcesPage() {
       )}
     </main>
   );
+}
+
+function describeSource(source: Source): string {
+  if (source.type === "upload") return "Uploaded files";
+  if (source.type === "github") {
+    const { repository, branch } = source.config as { repository?: string; branch?: string };
+    return `GitHub repository ${repository ?? "unknown"}, branch ${branch ?? "unknown"}`;
+  }
+  return source.type;
 }
 
 function describeError(error: unknown): string {

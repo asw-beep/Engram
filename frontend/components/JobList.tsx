@@ -2,9 +2,21 @@ import type { Job, JobStatus } from "@/lib/api";
 
 const RETRYABLE: JobStatus[] = ["partial", "failed", "interrupted"];
 
-export default function JobList({ jobs, onRetry }: { jobs: Job[]; onRetry: (id: string) => void }) {
+export default function JobList({
+  jobs,
+  sourceNames = {},
+  onRetry,
+}: {
+  jobs: Job[];
+  sourceNames?: Record<string, string>;
+  onRetry: (id: string) => void;
+}) {
   if (jobs.length === 0) {
-    return <p className="hint">No uploads yet. Files you upload appear here while they are processed.</p>;
+    return (
+      <p className="hint">
+        No jobs yet. Uploads and repository syncs appear here while they are processed.
+      </p>
+    );
   }
   return (
     <ul className="jobs">
@@ -12,6 +24,9 @@ export default function JobList({ jobs, onRetry }: { jobs: Job[]; onRetry: (id: 
         <li key={job.id} className="job">
           <div className="job-summary">
             <span className={`job-status status-${job.status}`}>{job.status.replaceAll("_", " ")}</span>
+            {sourceNames[job.source_id] && (
+              <span className="job-source">{sourceNames[job.source_id]}</span>
+            )}
             <span className="job-counts">{counts(job)}</span>
             <time className="job-time" dateTime={job.created_at}>
               {new Date(job.created_at).toLocaleString()}

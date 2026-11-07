@@ -7,7 +7,7 @@ from app.db.constants import DEFAULT_TENANT_ID, DEFAULT_UPLOAD_SOURCE_ID
 from app.db.models import Chunk, DocumentVersion, Source
 from app.ingestion.jobs import JobAlreadyOpen, create_job, mark_interrupted_jobs
 from app.ingestion.pipeline import run_ingestion
-from tests.fakes import ExplodingConnector
+from tests.fakes import ExplodingConnector, OversizedFileConnector
 
 
 def test_upload_creates_version_and_chunks(session, ingest):
@@ -60,6 +60,12 @@ def test_some_failures_with_nothing_waiting_is_partial(ingest, publish_all):
     job = ingest({"good.md": b"# A\nx\n", "bad.md": b"   "}, defer_embedding=True)
     assert job.status == "partial"
     assert job.file_counts == {"processed": 0, "skipped": 1, "failed": 1}
+
+
+def test_file_too_large_is_recorded_and_job_continues(ingest_with):
+    job = ingest_with(OversizedFileConnector())
+    assert job.file_counts == {"processed": 1, "skipped": 0, "failed": 1}
+    assert job.errors == [{"path": "big.md", "reason": "file is over 25 MB"}]
 
 
 def test_all_files_bad_fails_the_job(ingest):

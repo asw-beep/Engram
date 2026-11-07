@@ -1,5 +1,6 @@
 """The long-lived collaborators the app needs, built once from settings."""
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -15,6 +16,7 @@ from app.embedding.bge_m3 import BgeM3Embedder
 from app.generation.openrouter import OpenRouterProvider
 from app.generation.resilient import ResilientLLM
 from app.ingestion.connectors.base import Connector, ConnectorError
+from app.ingestion.connectors.github import GitHubConnector
 from app.ingestion.connectors.upload import UploadConnector
 from app.ingestion.pipeline import IngestionDeps
 from app.retrieval.dense import DenseRetriever
@@ -27,14 +29,30 @@ class Services(IngestionDeps):
     retriever: Any = None
 
 
-def build_services(settings: Settings) -> Services:
-    file_store = FileStore(Path(settings.storage_dir))
-
+def make_connector_for(
+    file_store: FileStore, github_client: httpx.Client, settings: Settings
+) -> Callable[[Source, IngestionJob], Connector]:
     def connector_for(source: Source, job: IngestionJob) -> Connector:
         if source.type == "upload":
             return UploadConnector(file_store, job.input.get("uploads", []))
+        if source.type == "github":
+            return GitHubConnector(
+                source.config["repository"],
+                source.config["branch"],
+                source.config["include_paths"],
+                settings.github_token,
+                github_client,
+                settings.max_upload_bytes,
+                temp_dir=Path(settings.download_dir),
+                retry_wait=settings.retry_wait_seconds,
+            )
         raise ConnectorError(f"Unsupported source type {source.type}")
 
+    return connector_for
+
+
+def build_services(settings: Settings) -> Services:
+    file_store = FileStore(Path(settings.storage_dir))
     embedder = BgeM3Embedder(settings)
     index = VectorIndex(
         QdrantClient(url=settings.qdrant_url, check_compatibility=False),
@@ -57,7 +75,7 @@ def build_services(settings: Settings) -> Services:
         file_store=file_store,
         embedder=embedder,
         index=index,
-        connector_for=connector_for,
+        connector_for=make_connector_for(file_store, httpx.Client(timeout=30.0), settings),
         settings=settings,
         retriever=DenseRetriever(embedder, index),
         llm=ResilientLLM(

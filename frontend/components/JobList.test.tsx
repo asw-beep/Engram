@@ -40,3 +40,14 @@ test.each(["running", "succeeded", "awaiting_embedding"])("%s cannot be retried"
   render(<JobList jobs={[job({ status })]} onRetry={vi.fn()} />);
   expect(screen.queryByRole("button", { name: /retry/i })).toBeNull();
 });
+
+test("names each job's source when its name is known", () => {
+  render(
+    <JobList
+      jobs={[job({ id: "a", source_id: "g" }), job({ id: "b", source_id: "gone" })]}
+      sourceNames={{ g: "kubernetes/website" }}
+      onRetry={vi.fn()}
+    />,
+  );
+  expect(screen.getAllByText("kubernetes/website")).toHaveLength(1);
+});

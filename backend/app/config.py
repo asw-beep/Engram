@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     max_upload_bytes: int = 25 * 1024 * 1024
 
     github_token: str | None = None
+    # Repository tarballs are saved here while a sync reads them, inside the project's data/.
+    download_dir: str = "../data/downloads"
 
 
 @lru_cache

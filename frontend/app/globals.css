@@ -361,7 +361,8 @@ code {
   font-size: 0.9375rem;
 }
 
-.retry-button {
+.retry-button,
+.small-button {
   margin-left: auto;
   padding: 0.25rem 0.875rem;
   border: 1px solid var(--rule);
@@ -372,7 +373,8 @@ code {
   cursor: pointer;
 }
 
-.retry-button:hover {
+.retry-button:hover,
+.small-button:hover {
   border-color: var(--ink);
 }
 
@@ -382,8 +384,82 @@ code {
   font-size: 0.9375rem;
 }
 
-.sources li + li {
-  margin-top: 0.25rem;
+.source {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 1rem;
+  padding: 0.625rem 0;
+  border-top: 1px solid var(--rule);
+}
+
+.source:last-child {
+  border-bottom: 1px solid var(--rule);
+}
+
+.source-name {
+  font-weight: 600;
+}
+
+.source-detail,
+.job-source {
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+.github-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.125rem;
+  max-width: 36rem;
+}
+
+.github-form .ask-button {
+  align-self: flex-start;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.field label {
+  font-weight: 600;
+}
+
+.label-note {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--field);
+  color: var(--ink);
+  font: inherit;
+}
+
+.field .code-input {
+  font-family: var(--font-code);
+  font-size: 0.9375rem;
+}
+
+.field textarea {
+  resize: vertical;
+}
+
+.field input:focus-visible,
+.field textarea:focus-visible {
+  border-color: var(--link);
+}
+
+.field-short input {
+  max-width: 16rem;
 }
 
 @media (max-width: 52rem) {
