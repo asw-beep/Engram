@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     embedding_dimension: int = 1024
     embedding_device: str = "cuda"
     embedding_batch_size: int = 8
+    # Load the model in the background at startup, so the first question doesn't wait for it.
+    preload_embedding_model: bool = False
 
     openrouter_api_key: str = ""
     llm_model: str = "nvidia/nemotron-3.5-super-vl:free"

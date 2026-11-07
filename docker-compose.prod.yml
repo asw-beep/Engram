@@ -1,0 +1,128 @@
+# The whole stack on one machine (spec section 9). From the repository root:
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+# Only Caddy publishes a port. It sends /api/* to the API and everything else to the web app.
+name: engram-prod
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    mem_limit: 128m
+    restart: unless-stopped
+    logging: *logging
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2019/config/"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  frontend:
+    build: ./frontend
+    mem_limit: 512m
+    restart: unless-stopped
+    logging: *logging
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://engram:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}@postgres:5432/engram
+      QDRANT_URL: http://qdrant:6333
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:?set OPENROUTER_API_KEY in .env.prod}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      STORAGE_DIR: /data/files
+      DOWNLOAD_DIR: /data/downloads
+      HF_HOME: /models
+      EMBEDDING_DEVICE: cpu
+      # Task 2: batch 4 peaked at 2.6 GB on 2 CPUs. Torch otherwise starts one thread per
+      # host core, not per CPU it may use.
+      EMBEDDING_BATCH_SIZE: "4"
+      OMP_NUM_THREADS: "2"
+      PRELOAD_EMBEDDING_MODEL: "true"
+    volumes:
+      - models:/models
+      - files:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    mem_limit: 4g
+    restart: unless-stopped
+    logging: *logging
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=5)"
+      interval: 10s
+      timeout: 6s
+      retries: 5
+      start_period: 60s
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: engram
+      POSTGRES_USER: engram
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    mem_limit: 1g
+    restart: unless-stopped
+    logging: *logging
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U engram -d engram"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  qdrant:
+    image: qdrant/qdrant:v1.20.0
+    volumes:
+      - qdrant-data:/qdrant/storage
+    mem_limit: 1536m
+    restart: unless-stopped
+    logging: *logging
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333'"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres-data:
+  qdrant-data:
+  files:
+  # BGE-M3 (about 4 GB). The first start downloads it into this volume. On the laptop it is
+  # the volume Task 2 filled from the local cache, so nothing is downloaded again.
+  models:
+    name: engram-hf
+  caddy-data:
+  caddy-config:
