@@ -56,3 +56,9 @@ test("an error without JSON names the status", async () => {
   const error = await uploadFiles("s", [new File(["x"], "a.md")], false).catch((e) => e);
   expect(error.message).toBe("The server returned HTTP 502.");
 });
+
+test("syncSource can defer embedding to the Kaggle notebook", async () => {
+  const fetchMock = stubFetch(Response.json({ job_id: "j3" }, { status: 202 }));
+  await syncSource("g", true);
+  expect(fetchMock.mock.calls[0][0]).toBe("/api/sources/g/sync?defer_embedding=true");
+});

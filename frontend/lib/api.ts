@@ -107,10 +107,12 @@ export function createGithubSource(body: GithubSourceInput): Promise<Source> {
   });
 }
 
-/** Start a job that reads the source's newest commit, and return the job's id. */
-export async function syncSource(id: string): Promise<string> {
+/** Start a job that reads the source's newest commit, and return the job's id. A deferred
+ * job stops at awaiting_embedding for the Kaggle notebook. */
+export async function syncSource(id: string, deferEmbedding = false): Promise<string> {
+  const query = deferEmbedding ? "?defer_embedding=true" : "";
   const accepted = await request<{ job_id: string }>(
-    `/api/sources/${encodeURIComponent(id)}/sync`,
+    `/api/sources/${encodeURIComponent(id)}/sync${query}`,
     { method: "POST" },
   );
   return accepted.job_id;

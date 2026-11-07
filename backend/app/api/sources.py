@@ -53,6 +53,7 @@ def sync_source(
     session: SessionDep,
     services: ServicesDep,
     scope: ScopeDep,
+    defer_embedding: bool = False,
 ) -> JobAccepted:
     source = get_source(session, scope.tenant_id, source_id)
     if source is None:
@@ -60,7 +61,7 @@ def sync_source(
     if source.type != "github":
         raise HTTPException(409, "Only GitHub sources can be synced")
     try:
-        job = create_job(session, source, {"defer_embedding": False})
+        job = create_job(session, source, {"defer_embedding": defer_embedding})
     except JobAlreadyOpen as error:
         raise HTTPException(
             409, {"message": "This source already has an open job", "job_id": str(error.job_id)}

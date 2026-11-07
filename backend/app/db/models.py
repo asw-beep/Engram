@@ -59,6 +59,10 @@ class DocumentVersion(Base):
     revision: Mapped[str | None] = mapped_column(Text)
     storage_key: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # The deferred job whose import will publish this version (the Kaggle route).
+    awaiting_job_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("ingestion_jobs.id"), index=True
+    )
 
 
 class Chunk(Base):

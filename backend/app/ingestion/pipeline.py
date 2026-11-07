@@ -143,7 +143,7 @@ def _run(session: Session, job: IngestionJob, deps: IngestionDeps) -> None:
                 outcome, version_id = _save_file(session, job, fetched, deps)
                 session.commit()
                 if version_id is not None and defer_embedding:
-                    _mark_waiting(session, version_id)
+                    _mark_waiting(session, version_id, job.id)
                     waiting = True
                 elif version_id is not None:
                     _embed_and_publish(session, version_id, deps)
@@ -263,8 +263,14 @@ def _embed_and_publish(session: Session, version_id: UUID, deps: IngestionDeps) 
         raise PublishError("could not save vectors to Qdrant") from error
 
 
-def _mark_waiting(session: Session, version_id: UUID) -> None:
-    """A deferred version's chunks wait for export, including ones embedded before."""
+def _mark_waiting(session: Session, version_id: UUID, job_id: UUID) -> None:
+    """A deferred version waits for this job's import, and all its chunks for export,
+    including ones embedded before."""
+    session.execute(
+        update(DocumentVersion)
+        .where(DocumentVersion.id == version_id)
+        .values(awaiting_job_id=job_id)
+    )
     session.execute(
         update(Chunk)
         .where(Chunk.document_version_id == version_id, Chunk.embedded_at.is_not(None))

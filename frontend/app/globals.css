@@ -378,6 +378,22 @@ code {
   border-color: var(--ink);
 }
 
+.job-next {
+  margin-top: 0.5rem;
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+.job-next code {
+  font-family: var(--font-code);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+.sources-option {
+  margin-bottom: 0.75rem;
+}
+
 .job-errors {
   margin: 0.5rem 0 0 1.25rem;
   color: var(--muted);

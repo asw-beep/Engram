@@ -2,11 +2,14 @@ import os
 
 os.environ["HF_HUB_OFFLINE"] = "1"
 
+import json  # noqa: E402
 from contextlib import contextmanager  # noqa: E402
 from dataclasses import fields, replace  # noqa: E402
 from pathlib import Path  # noqa: E402
 from uuid import uuid4  # noqa: E402
 
+import pyarrow as pa  # noqa: E402
+import pyarrow.parquet as pq  # noqa: E402
 import pytest  # noqa: E402
 from alembic import command  # noqa: E402
 from alembic.config import Config  # noqa: E402
@@ -32,6 +35,7 @@ from app.db.models import (  # noqa: E402
     Tenant,
 )
 from app.db.vector_index import IndexedPoint, VectorIndex  # noqa: E402
+from app.embedding.base import embedding_text  # noqa: E402
 from app.ingestion.jobs import create_job, retry_job  # noqa: E402
 from app.ingestion.pipeline import IngestionDeps, run_ingestion  # noqa: E402
 from app.main import create_app  # noqa: E402
@@ -387,6 +391,67 @@ def point():
 @pytest.fixture
 def published_job(ingest):
     return ingest({"guide.md": b"# A\nhello\n"})
+
+
+@pytest.fixture
+def deferred_job(ingest):
+    """A job awaiting embedding: one file under heading A, with one chunk waiting."""
+    return ingest({"a.md": b"# A\nhello\n"}, defer_embedding=True)
+
+
+@pytest.fixture
+def deferred_partial_job(ingest):
+    """The same as deferred_job, plus one file that failed."""
+    return ingest({"a.md": b"# A\nhello\n", "bad.md": b"   "}, defer_embedding=True)
+
+
+@pytest.fixture
+def shards(session, settings, tmp_path):
+    """Write an import folder for the chunks waiting now: manifest.json and one shard.
+
+    Vectors are FakeEmbedder's, so imported chunks can be found by questions. The faults:
+    manifest changes fields, drop leaves out chunks, extra adds unknown ids, repeat lists the
+    first chunk twice, vector_length shortens vectors and fill sets every value.
+    """
+    embedder = FakeEmbedder()
+
+    def write(manifest=None, drop=0, extra=0, vector_length=1024, fill=None, repeat=False) -> Path:
+        chunks = session.scalars(
+            select(Chunk).where(Chunk.embedded_at.is_(None)).order_by(Chunk.id)
+        ).all()
+
+        def vector(text: str) -> list[float]:
+            if fill is not None:
+                return [fill] * vector_length
+            if vector_length != embedder.dimension:
+                return [1.0] * vector_length
+            return embedder.embed_passages([text], 1)[0]
+
+        rows = [
+            (str(chunk.id), vector(embedding_text(tuple(chunk.heading_path), chunk.content)))
+            for chunk in chunks
+        ][drop:]
+        rows += [(str(uuid4()), vector("unknown")) for _ in range(extra)]
+        if repeat:
+            rows.append(rows[0])
+        folder = tmp_path / f"import-{uuid4().hex[:8]}"
+        folder.mkdir()
+        body = {
+            "model_id": settings.embedding_model_id,
+            "model_revision": settings.embedding_model_revision,
+            "dimension": settings.embedding_dimension,
+            "chunk_count": len(rows),
+            **(manifest or {}),
+        }
+        (folder / "manifest.json").write_text(json.dumps(body), encoding="utf-8")
+        table = pa.table(
+            {"chunk_id": [row[0] for row in rows], "vector": [row[1] for row in rows]},
+            schema=pa.schema([("chunk_id", pa.string()), ("vector", pa.list_(pa.float64()))]),
+        )
+        pq.write_table(table, folder / "vectors-00000.parquet")
+        return folder
+
+    return write
 
 
 @pytest.fixture

@@ -129,3 +129,16 @@ test("jobs name their source", async () => {
   await advance(0);
   expect(screen.getAllByText("o/r").length).toBeGreaterThan(1);
 });
+
+test("a sync can defer embedding to the Kaggle notebook", async () => {
+  serve([[]], [SOURCE, GITHUB]);
+  render(<SourcesPage />);
+  await advance(0);
+  fireEvent.click(screen.getByLabelText(/embed syncs later/i));
+  fireEvent.click(screen.getByRole("button", { name: "Sync o/r" }));
+  await advance(0);
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/sources/g/sync?defer_embedding=true",
+    expect.objectContaining({ method: "POST" }),
+  );
+});

@@ -1,8 +1,12 @@
 import pytest
+from alembic.autogenerate import compare_metadata
+from alembic.runtime.migration import MigrationContext
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
+from app.db.base import Base
 from app.db.constants import DEFAULT_TENANT_ID, DEFAULT_UPLOAD_SOURCE_ID
-from app.db.models import Source, Tenant
+from app.db.models import DocumentVersion, Source, Tenant
 
 
 def test_migration_seeds_default_tenant_and_upload_source(session):
@@ -44,3 +48,15 @@ def test_only_one_open_job_per_source(session, make_job, status):
 def test_finished_job_allows_a_new_job(session, make_job):
     make_job(status="succeeded")
     make_job(status="pending")
+
+
+def test_models_match_the_migrations(migrated_session_factory):
+    engine = migrated_session_factory.kw["bind"]
+    with engine.connect() as connection:
+        differences = compare_metadata(MigrationContext.configure(connection), Base.metadata)
+    assert differences == []
+
+
+def test_deferred_version_records_the_job_waiting_for_it(session, deferred_job):
+    version = session.scalars(select(DocumentVersion)).one()
+    assert version.awaiting_job_id == deferred_job.id

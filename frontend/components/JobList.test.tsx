@@ -51,3 +51,13 @@ test("names each job's source when its name is known", () => {
   );
   expect(screen.getAllByText("kubernetes/website")).toHaveLength(1);
 });
+
+test("a job awaiting embedding shows how to export its chunks", () => {
+  render(<JobList jobs={[job({ id: "j-42", status: "awaiting_embedding" })]} onRetry={vi.fn()} />);
+  expect(screen.getByText(/export-chunks --job j-42/)).toBeInTheDocument();
+});
+
+test("other jobs show no export command", () => {
+  render(<JobList jobs={[job({ status: "succeeded" })]} onRetry={vi.fn()} />);
+  expect(screen.queryByText(/export-chunks/)).not.toBeInTheDocument();
+});

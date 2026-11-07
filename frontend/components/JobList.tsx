@@ -37,6 +37,13 @@ export default function JobList({
               </button>
             )}
           </div>
+          {job.status === "awaiting_embedding" && (
+            <p className="job-next">
+              Waiting for vectors. From <code>backend/</code>, run{" "}
+              <code>uv run python -m app.cli export-chunks --job {job.id} --out chunks.jsonl</code>
+              , embed the file with the Kaggle notebook, then run <code>import-vectors</code>.
+            </p>
+          )}
           {job.errors.length > 0 && (
             <ul className="job-errors">
               {job.errors.map((error, index) => (

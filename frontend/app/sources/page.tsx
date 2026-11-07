@@ -21,6 +21,7 @@ export default function SourcesPage() {
   const [sources, setSources] = useState<Source[] | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [deferSync, setDeferSync] = useState(false);
 
   const refreshJobs = useCallback(async () => {
     try {
@@ -57,7 +58,7 @@ export default function SourcesPage() {
   async function sync(id: string) {
     setError(null);
     try {
-      await syncSource(id);
+      await syncSource(id, deferSync);
     } catch (failure) {
       setError(describeError(failure));
     }
@@ -113,6 +114,14 @@ export default function SourcesPage() {
       {sources && sources.length > 0 && (
         <section className="section">
           <h2>Connected sources</h2>
+          <label className="checkbox sources-option">
+            <input
+              type="checkbox"
+              checked={deferSync}
+              onChange={(event) => setDeferSync(event.target.checked)}
+            />
+            Embed syncs later with the Kaggle notebook
+          </label>
           <ul className="sources">
             {sources.map((source) => (
               <li key={source.id} className="source">

@@ -93,3 +93,9 @@ def test_github_answer_links_to_the_commit(client, github_source, fake_llm, fake
         "citations"
     ][0]
     assert citation["url"].startswith("https://github.com/o/r/blob/abc/docs/a.md#L")
+
+
+def test_sync_can_defer_embedding(client, github_source, fake_repo):
+    response = client.post(f"/api/sources/{github_source.id}/sync?defer_embedding=true")
+    job = client.get(f"/api/jobs/{response.json()['job_id']}").json()
+    assert job["status"] == "awaiting_embedding"
