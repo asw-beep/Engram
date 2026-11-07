@@ -282,6 +282,24 @@ def fake_llm():
 
 
 @pytest.fixture
+def client_with_broken_qdrant(settings, services):
+    """The app with a VectorIndex on a port nothing listens on, so every search fails.
+
+    127.0.0.1 rather than localhost, because localhost stalls on this machine.
+    """
+    broken = VectorIndex(
+        QdrantClient(url="http://127.0.0.1:1", check_compatibility=False, timeout=5),
+        "unreachable",
+        settings.embedding_dimension,
+    )
+    broken_services = replace(
+        services, index=broken, retriever=DenseRetriever(services.embedder, broken)
+    )
+    yield TestClient(create_app(settings, broken_services))
+    broken.client.close()
+
+
+@pytest.fixture
 def other_tenant(session):
     """A second tenant with its own upload source."""
     tenant = Tenant(name="Other")

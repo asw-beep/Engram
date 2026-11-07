@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api import health, jobs, sources
+from app.api import health, jobs, questions, sources
 from app.config import Settings, get_settings
 from app.ingestion.jobs import mark_interrupted_jobs
 from app.services import Services, build_services
@@ -36,4 +36,5 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app.include_router(health.router)
     app.include_router(sources.router)
     app.include_router(jobs.router)
+    app.include_router(questions.router)
     return app

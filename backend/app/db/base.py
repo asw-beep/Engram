@@ -14,6 +14,10 @@ class Base(DeclarativeBase):
     metadata = MetaData(naming_convention=NAMING_CONVENTION)
 
 
-def build_session_factory(database_url: str) -> sessionmaker[Session]:
-    engine = create_engine(database_url, pool_pre_ping=True)
+def build_session_factory(database_url: str, connect_timeout: int = 5) -> sessionmaker[Session]:
+    # Without a timeout, psycopg on Windows waits forever on a refused connection, so a stopped
+    # Postgres would hang requests instead of returning 503.
+    engine = create_engine(
+        database_url, pool_pre_ping=True, connect_args={"connect_timeout": connect_timeout}
+    )
     return sessionmaker(engine)
