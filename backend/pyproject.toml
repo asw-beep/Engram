@@ -1,0 +1,62 @@
+[project]
+name = "engram-backend"
+version = "0.1.0"
+description = "Multi-tenant, permission-aware RAG platform for engineering knowledge"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "alembic>=1.20",
+    "fastapi>=0.162",
+    "httpx>=0.28",
+    "markdown-it-py>=4.2",
+    "psutil>=7",
+    "psycopg[binary]>=3.3",
+    "pyarrow>=26",
+    "pydantic-settings>=2.16",
+    "pypdf>=7",
+    "python-docx>=1.2",
+    "python-multipart>=0.0.33",
+    "qdrant-client>=1.20",
+    "sentence-transformers>=6.2",
+    "sqlalchemy>=2.1",
+    "tenacity>=9.2",
+    "torch",
+    "uvicorn[standard]>=0.40",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2",
+    "reportlab>=4",
+    "ruff>=0.17",
+]
+
+[tool.uv]
+package = false
+environments = ["sys_platform == 'win32'", "sys_platform == 'linux'"]
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cu130", marker = "sys_platform == 'win32'" },
+    { index = "pytorch-cpu", marker = "sys_platform == 'linux'" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
