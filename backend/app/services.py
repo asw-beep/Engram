@@ -14,6 +14,7 @@ from app.embedding.bge_m3 import BgeM3Embedder
 from app.ingestion.connectors.base import Connector, ConnectorError
 from app.ingestion.connectors.upload import UploadConnector
 from app.ingestion.pipeline import IngestionDeps
+from app.retrieval.dense import DenseRetriever
 from app.storage.files import FileStore
 
 
@@ -31,15 +32,18 @@ def build_services(settings: Settings) -> Services:
             return UploadConnector(file_store, job.input.get("uploads", []))
         raise ConnectorError(f"Unsupported source type {source.type}")
 
+    embedder = BgeM3Embedder(settings)
+    index = VectorIndex(
+        QdrantClient(url=settings.qdrant_url, check_compatibility=False),
+        settings.qdrant_collection,
+        settings.embedding_dimension,
+    )
     return Services(
         session_factory=build_session_factory(settings.database_url),
         file_store=file_store,
-        embedder=BgeM3Embedder(settings),
-        index=VectorIndex(
-            QdrantClient(url=settings.qdrant_url, check_compatibility=False),
-            settings.qdrant_collection,
-            settings.embedding_dimension,
-        ),
+        embedder=embedder,
+        index=index,
         connector_for=connector_for,
         settings=settings,
+        retriever=DenseRetriever(embedder, index),
     )

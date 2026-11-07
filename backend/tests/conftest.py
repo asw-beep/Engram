@@ -36,9 +36,11 @@ from app.ingestion.connectors.upload import UploadConnector  # noqa: E402
 from app.ingestion.jobs import create_job, retry_job  # noqa: E402
 from app.ingestion.pipeline import IngestionDeps, run_ingestion  # noqa: E402
 from app.main import create_app  # noqa: E402
+from app.retrieval.dense import DenseRetriever  # noqa: E402
 from app.services import Services  # noqa: E402
 from app.storage.files import FileStore  # noqa: E402
 from tests.fakes import FailingConnector, FakeEmbedder  # noqa: E402
+from tests.tenants import TENANT_A, TENANT_B  # noqa: E402
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 TEST_DATABASE = "engram_test"
@@ -265,9 +267,11 @@ def finish_job(session):
 
 
 @pytest.fixture
-def services(deps):
-    """The same collaborators as deps; llm and retriever stay None until those tasks."""
-    return Services(**{field.name: getattr(deps, field.name) for field in fields(deps)})
+def services(deps, retriever):
+    """The same collaborators as deps, plus the retriever; llm stays None until Task 10."""
+    return Services(
+        **{field.name: getattr(deps, field.name) for field in fields(deps)}, retriever=retriever
+    )
 
 
 @pytest.fixture
@@ -357,5 +361,106 @@ def retry(session, deps):
         run_ingestion(job.id, deps)
         session.refresh(job)
         return job
+
+    return run
+
+
+@pytest.fixture
+def two_tenants(session):
+    """Tenants A and B, each with an upload source."""
+    for tenant_id, name in ((TENANT_A, "Tenant A"), (TENANT_B, "Tenant B")):
+        session.add(Tenant(id=tenant_id, name=name))
+        session.flush()
+        session.add(Source(tenant_id=tenant_id, type="upload", name="Uploads"))
+    session.commit()
+
+
+@pytest.fixture
+def retriever(deps):
+    return DenseRetriever(deps.embedder, deps.index)
+
+
+@pytest.fixture
+def seed_chunk(session, index, two_tenants):
+    """Publish one chunk to Postgres and Qdrant, in the current version of the path's document."""
+    embedder = FakeEmbedder()
+
+    def seed(text, tenant=DEFAULT_TENANT_ID, principals=("tenant",), path="a.md"):
+        source = session.scalars(select(Source).filter_by(tenant_id=tenant, type="upload")).first()
+        document = session.scalars(
+            select(Document).filter_by(tenant_id=tenant, source_id=source.id, path=path)
+        ).one_or_none()
+        if document is None:
+            document = Document(
+                id=uuid4(),
+                tenant_id=tenant,
+                source_id=source.id,
+                path=path,
+                file_type="md",
+                allowed_principals=list(principals),
+            )
+            session.add(document)
+            session.flush()
+            version = DocumentVersion(
+                id=uuid4(),
+                tenant_id=tenant,
+                document_id=document.id,
+                content_hash=uuid4().hex,
+                storage_key=f"{tenant}/{'0' * 64}",
+            )
+            session.add(version)
+            session.flush()
+            document.current_version_id = version.id
+        else:
+            version = session.get(DocumentVersion, document.current_version_id)
+        position = session.scalar(
+            select(func.count()).select_from(Chunk).filter_by(document_version_id=version.id)
+        )
+        chunk = Chunk(
+            id=uuid4(),
+            tenant_id=tenant,
+            document_version_id=version.id,
+            position=position,
+            content=text,
+            token_count=len(text.split()),
+            embedding_model=embedder.model_id,
+            embedded_at=func.now(),
+        )
+        session.add(chunk)
+        session.commit()
+        index.upsert(
+            [
+                IndexedPoint(
+                    chunk_id=chunk.id,
+                    vector=embedder.embed_passages([text], 1)[0],
+                    tenant_id=tenant,
+                    document_id=document.id,
+                    document_version_id=version.id,
+                    allowed_principals=list(document.allowed_principals),
+                )
+            ]
+        )
+        return chunk
+
+    return seed
+
+
+@pytest.fixture
+def supersede(session):
+    """Make a new, empty version of the chunk's document current, so the chunk is stale."""
+
+    def run(chunk):
+        old = session.get(DocumentVersion, chunk.document_version_id)
+        new = DocumentVersion(
+            id=uuid4(),
+            tenant_id=old.tenant_id,
+            document_id=old.document_id,
+            content_hash=uuid4().hex,
+            storage_key=old.storage_key,
+        )
+        session.add(new)
+        session.flush()
+        session.get(Document, old.document_id).current_version_id = new.id
+        session.commit()
 
     return run
