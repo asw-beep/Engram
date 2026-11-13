@@ -442,6 +442,91 @@ code {
   text-transform: uppercase;
 }
 
+.source-panels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+  margin-top: 3rem;
+}
+
+.source-panel {
+  padding: 1.5rem;
+}
+
+.source-panel h2 {
+  margin-bottom: 1.25rem;
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 1.5rem;
+  border: 1px dashed var(--ink);
+  background: var(--field);
+  transition: border-color 0.15s;
+}
+
+.dropzone[data-dragging="true"] {
+  border: 1px solid var(--signal);
+  outline: 2px solid var(--signal);
+}
+
+.dropzone-prompt {
+  font-size: 1.125rem;
+  font-weight: 500;
+}
+
+.dropzone input[type="file"] {
+  max-width: 100%;
+  margin-top: 0.5rem;
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.chosen-files {
+  width: 100%;
+  list-style: none;
+  font-family: var(--font-code);
+  font-size: 0.8125rem;
+}
+
+.chosen-files li {
+  padding: 0.375rem 0;
+  border-bottom: 1px solid var(--grid);
+  overflow-wrap: anywhere;
+}
+
+.job-bar {
+  position: relative;
+  width: 6rem;
+  height: 0.5rem;
+  border: 1px solid var(--ink);
+  overflow: hidden;
+}
+
+.job-bar::after {
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: var(--signal);
+  content: "";
+  animation: job-bar 1.4s cubic-bezier(0.6, 0, 0.4, 1) infinite alternate;
+}
+
+@keyframes job-bar {
+  to {
+    transform: translateX(150%);
+  }
+}
+
 .upload {
   display: flex;
   flex-direction: column;
@@ -449,13 +534,16 @@ code {
   gap: 0.75rem;
 }
 
+.upload label[for="files"] {
+  font-family: var(--font-code);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .upload label[for="files"],
 .field label {
   font-weight: 600;
-}
-
-.upload .hint {
-  margin-top: -0.5rem;
 }
 
 .checkbox {
@@ -618,6 +706,10 @@ input[type="checkbox"] {
 
   .margin {
     position: static;
+  }
+
+  .source-panels {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

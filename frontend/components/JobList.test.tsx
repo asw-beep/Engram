@@ -61,3 +61,10 @@ test("other jobs show no export command", () => {
   render(<JobList jobs={[job({ status: "succeeded" })]} onRetry={vi.fn()} />);
   expect(screen.queryByText(/export-chunks/)).not.toBeInTheDocument();
 });
+
+test("a running job shows a progress bar and a finished job doesn't", () => {
+  const { rerender } = render(<JobList jobs={[job({ status: "running" })]} onRetry={vi.fn()} />);
+  expect(screen.getByRole("progressbar", { name: "Job running" })).toBeInTheDocument();
+  rerender(<JobList jobs={[job({ status: "succeeded" })]} onRetry={vi.fn()} />);
+  expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+});

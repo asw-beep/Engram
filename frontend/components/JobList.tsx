@@ -1,6 +1,7 @@
 import type { Job, JobStatus } from "@/lib/api";
 
 const RETRYABLE: JobStatus[] = ["partial", "failed", "interrupted"];
+const MOVING: JobStatus[] = ["pending", "running"];
 
 export default function JobList({
   jobs,
@@ -26,6 +27,9 @@ export default function JobList({
             <span className={`job-status status-${job.status}`}>{job.status.replaceAll("_", " ")}</span>
             {sourceNames[job.source_id] && (
               <span className="job-source">{sourceNames[job.source_id]}</span>
+            )}
+            {MOVING.includes(job.status) && (
+              <span className="job-bar" role="progressbar" aria-label="Job running" />
             )}
             <span className="job-counts">{counts(job)}</span>
             <time className="job-time" dateTime={job.created_at}>

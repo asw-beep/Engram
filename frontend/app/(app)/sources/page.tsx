@@ -82,30 +82,32 @@ export default function SourcesPage() {
         </p>
       )}
 
-      <section className="section">
-        <h2>Upload documents</h2>
-        {uploads ? (
-          <UploadForm
-            sourceId={uploads.id}
-            onUploaded={() => {
+      <div className="source-panels">
+        <section className="panel source-panel">
+          <h2>Upload documents</h2>
+          {uploads ? (
+            <UploadForm
+              sourceId={uploads.id}
+              onUploaded={() => {
+                setError(null);
+                void refreshJobs();
+              }}
+            />
+          ) : (
+            sources && <p className="hint">There is no upload source for this workspace.</p>
+          )}
+        </section>
+
+        <section className="panel source-panel">
+          <h2>Connect a GitHub repository</h2>
+          <GithubSourceForm
+            onCreated={(source) => {
               setError(null);
-              void refreshJobs();
+              setSources((current) => [...(current ?? []), source]);
             }}
           />
-        ) : (
-          sources && <p className="hint">There is no upload source for this workspace.</p>
-        )}
-      </section>
-
-      <section className="section">
-        <h2>Connect a GitHub repository</h2>
-        <GithubSourceForm
-          onCreated={(source) => {
-            setError(null);
-            setSources((current) => [...(current ?? []), source]);
-          }}
-        />
-      </section>
+        </section>
+      </div>
 
       <section className="section">
         <h2>Recent jobs</h2>
