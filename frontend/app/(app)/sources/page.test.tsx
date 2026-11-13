@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
-import SourcesPage from "@/app/sources/page";
+import SourcesPage from "@/app/(app)/sources/page";
 import type { Job, JobStatus, Source } from "@/lib/api";
 
 const SOURCE = { id: "s", type: "upload", name: "Uploads", config: {} };

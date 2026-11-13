@@ -1,14 +1,12 @@
-import AskForm from "@/components/AskForm";
+import Link from "next/link";
 
-export default function AskPage() {
+export default function LandingPage() {
   return (
     <main className="page">
-      <h1 className="page-title">Ask your engineering documents</h1>
+      <h1 className="page-title">Engram</h1>
       <p className="lede">
-        Every answer cites the passages it comes from. Select a marker such as [1] to read the
-        passage beside the answer.
+        <Link href="/ask">Ask a question</Link>
       </p>
-      <AskForm />
     </main>
   );
 }

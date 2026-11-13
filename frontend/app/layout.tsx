@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
 
 import "./globals.css";
+
+const text = Space_Grotesk({ subsets: ["latin"], variable: "--font-text", display: "swap" });
+const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Engram",
@@ -10,19 +13,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en">
-      <body>
-        <header className="site-header">
-          <Link href="/" className="brand">
-            Engram
-          </Link>
-          <nav aria-label="Main">
-            <Link href="/">Ask</Link>
-            <Link href="/sources">Sources</Link>
-          </nav>
-        </header>
-        {children}
-      </body>
+    <html lang="en" className={`${text.variable} ${mono.variable}`}>
+      <body>{children}</body>
     </html>
   );
 }
