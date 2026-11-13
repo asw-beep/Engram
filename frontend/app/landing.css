@@ -1,0 +1,620 @@
+/* Landing page. Tokens and shared classes come from globals.css. */
+
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.landing {
+  padding-top: var(--nav-height);
+  overflow-x: clip;
+}
+
+:root {
+  --nav-height: 3.25rem;
+}
+
+.status-tag {
+  display: inline-block;
+  padding: 0 0.4em;
+  border: 1px dashed currentColor;
+  font-family: var(--font-code);
+  font-size: 0.625rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  line-height: 1.5;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Nav */
+
+.l-nav {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  height: var(--nav-height);
+  padding: 0 var(--gutter);
+  border-bottom: 1px solid var(--ink);
+  background: var(--paper);
+  font-family: var(--font-code);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.l-nav[data-hidden="true"]:not(:focus-within) {
+  transform: translateY(-100%);
+}
+
+.l-nav nav,
+.l-nav-sections {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  list-style: none;
+}
+
+.l-nav a {
+  text-decoration: none;
+}
+
+.l-nav nav a:hover {
+  text-decoration: underline;
+}
+
+.l-nav .l-nav-ask {
+  padding: 0.375rem 0.75rem;
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.l-nav .l-nav-ask:hover {
+  background: var(--signal);
+  color: var(--on-signal);
+  text-decoration: none;
+}
+
+/* Hero */
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100svh - var(--nav-height));
+}
+
+.hero-main {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: clamp(2rem, 5vw, 5rem);
+  align-items: center;
+  padding: clamp(2.5rem, 6vw, 5rem) var(--gutter);
+}
+
+.hero-kicker {
+  color: var(--muted);
+}
+
+.hero-title {
+  margin-top: 1.25rem;
+  font-size: clamp(3.25rem, 9.5vw, 9rem);
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  line-height: 0.9;
+}
+
+.hero-line {
+  display: block;
+  /* Room for descenders, which the mask would otherwise clip. */
+  padding-bottom: 0.12em;
+  margin-bottom: -0.12em;
+  overflow: hidden;
+}
+
+.hero-line > span {
+  display: inline-block;
+}
+
+.hero-accent {
+  color: var(--signal);
+}
+
+.hero-lede {
+  max-width: 46ch;
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 1.125rem;
+  line-height: 1.55;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
+/* Query diagram */
+
+.qd {
+  width: 100%;
+  max-width: 26rem;
+  justify-self: end;
+}
+
+.qd-steps,
+.qd-pair {
+  list-style: none;
+}
+
+.qd-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.625rem;
+}
+
+.qd-node {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 3.25rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.qd-index {
+  margin-left: auto;
+  opacity: 0.7;
+}
+
+.qd-hot {
+  border-color: var(--signal);
+  background: var(--signal);
+  color: var(--on-signal);
+}
+
+.qd-wire {
+  position: relative;
+  height: 2rem;
+  margin-left: 2rem;
+}
+
+.qd-wire > span {
+  display: block;
+  height: 100%;
+  border-left: 1px dashed var(--ink);
+  transform-origin: top;
+}
+
+/* A packet travelling down each wire. */
+.qd-wire::after {
+  position: absolute;
+  top: 0;
+  left: -3px;
+  width: 7px;
+  height: 7px;
+  background: var(--signal);
+  content: "";
+  animation: packet 2.4s cubic-bezier(0.6, 0, 0.4, 1) infinite;
+}
+
+.qd-wire:nth-of-type(4)::after {
+  animation-delay: 0.8s;
+}
+
+.qd-wire:nth-of-type(6)::after {
+  animation-delay: 1.6s;
+}
+
+@keyframes packet {
+  0%,
+  15% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+  25% {
+    opacity: 1;
+  }
+  45% {
+    opacity: 1;
+    transform: translateY(calc(2rem - 7px));
+  }
+  55%,
+  100% {
+    opacity: 0;
+    transform: translateY(calc(2rem - 7px));
+  }
+}
+
+.qd figcaption {
+  margin-top: 1rem;
+  color: var(--muted);
+}
+
+/* Title block, as on an engineering drawing */
+
+.title-block {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1.5fr 1fr;
+  border-top: 1px solid var(--ink);
+  background: var(--paper);
+}
+
+.title-block > div {
+  padding: 0.625rem var(--gutter);
+  border-left: 1px solid var(--ink);
+}
+
+.title-block > div:first-child {
+  border-left: 0;
+}
+
+.title-block dt {
+  color: var(--muted);
+  font-family: var(--font-code);
+  font-size: 0.625rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.title-block dd {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* Ticker */
+
+.ticker {
+  overflow: hidden;
+  border-block: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: ticker 36s linear infinite;
+}
+
+.ticker:hover .ticker-track {
+  animation-play-state: paused;
+}
+
+.ticker-items {
+  display: flex;
+  flex-shrink: 0;
+  list-style: none;
+}
+
+.ticker-items li {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.875rem 0;
+  font-family: var(--font-code);
+  font-size: 0.8125rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.ticker-items li::after {
+  margin: 0 1.75rem 0 1.125rem;
+  color: var(--signal);
+  content: "+";
+}
+
+.ticker-planned {
+  opacity: 0.75;
+}
+
+@keyframes ticker {
+  to {
+    transform: translateX(calc(-100% / 3));
+  }
+}
+
+/* Sections */
+
+.l-section {
+  padding: clamp(4.5rem, 11vw, 9rem) var(--gutter);
+  border-bottom: 1px solid var(--ink);
+  scroll-margin-top: var(--nav-height);
+}
+
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.75rem;
+  color: var(--muted);
+}
+
+.section-label::before {
+  width: 0.5rem;
+  height: 0.5rem;
+  background: var(--signal);
+  content: "";
+}
+
+.section-title {
+  max-width: 18ch;
+  font-size: clamp(2rem, 5vw, 4rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  text-wrap: balance;
+}
+
+.section-lede {
+  max-width: 54ch;
+  margin-top: 1.25rem;
+  color: var(--muted);
+  font-size: 1.0625rem;
+}
+
+/* Problem */
+
+.problem-text {
+  max-width: 24em;
+  font-size: clamp(1.625rem, 4.4vw, 4rem);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+}
+
+/* Cards */
+
+.store-grid,
+.rule-grid {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 2.5rem;
+  list-style: none;
+}
+
+.store-grid {
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.rule-grid {
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  margin-top: 0.75rem;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 9rem;
+  padding: 1.125rem;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+
+.card.planned {
+  border-style: dashed;
+}
+
+.card:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.card-text {
+  margin-top: auto;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+}
+
+.rule {
+  min-height: 12rem;
+}
+
+.rule-id {
+  color: var(--signal);
+}
+
+.rule-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+/* Build log */
+
+.bl-rail {
+  height: 5px;
+  margin-top: 2.5rem;
+  border-bottom: 1px solid var(--ink);
+}
+
+.bl-rail > span {
+  display: block;
+  height: 5px;
+  background: var(--signal);
+  transform-origin: left;
+}
+
+.bl-phases {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  list-style: none;
+}
+
+.bl-phase {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 11rem;
+  padding: 1.125rem 1.125rem 1.125rem 0;
+}
+
+.bl-phase + .bl-phase {
+  padding-left: 1.125rem;
+  border-left: 1px solid var(--ink);
+}
+
+.bl-phase.planned {
+  border-left-style: dashed;
+  color: var(--muted);
+}
+
+.bl-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.bl-name {
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+/* Closing */
+
+.closing {
+  padding: clamp(4rem, 10vw, 8rem) var(--gutter) 2.5rem;
+  background: var(--ink);
+  color: var(--paper);
+  overflow: hidden;
+}
+
+.closing-label {
+  opacity: 0.7;
+}
+
+.closing-type {
+  margin-top: 1.5rem;
+  font-size: clamp(4rem, 16.5vw, 16rem);
+  font-weight: 700;
+  letter-spacing: -0.06em;
+  line-height: 0.84;
+  transform-origin: left bottom;
+}
+
+.closing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.25rem 2rem;
+  margin-top: clamp(2.5rem, 6vw, 5rem);
+  padding-top: 1.5rem;
+  border-top: 1px solid color-mix(in srgb, var(--paper) 40%, transparent);
+}
+
+.closing .closing-button {
+  padding: 1.125rem 1.75rem;
+  border-color: var(--signal);
+  background: var(--signal);
+  color: var(--on-signal);
+  font-size: 0.875rem;
+}
+
+.closing .closing-button:hover {
+  border-color: var(--paper);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.closing-link {
+  color: var(--paper);
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.closing :focus-visible {
+  outline-color: var(--paper);
+}
+
+/* Narrow screens */
+
+@media (max-width: 52rem) {
+  .l-nav-sections {
+    display: none;
+  }
+
+  .hero-main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .qd {
+    max-width: none;
+    justify-self: stretch;
+  }
+
+  .title-block {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .title-block > div:nth-child(3) {
+    border-left: 0;
+  }
+
+  .title-block > div:nth-child(n + 3) {
+    border-top: 1px solid var(--ink);
+  }
+
+  .bl-phases {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .bl-phase,
+  .bl-phase + .bl-phase {
+    min-height: 0;
+    padding: 1.125rem 0;
+    border-left: 0;
+    border-bottom: 1px solid var(--ink);
+  }
+
+  .bl-phase.planned {
+    border-bottom-style: dashed;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track {
+    animation: none;
+  }
+
+  .qd-wire::after {
+    display: none;
+  }
+}
