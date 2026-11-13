@@ -28,12 +28,22 @@ Tests use the real Postgres and Qdrant services, so start them first.
 
 ### Frontend
 
-Run these commands from `frontend/`. The development server forwards `/api` requests to the API on port 8000, so start the API first.
+The frontend has three pages:
+
+| Page | What it is |
+|---|---|
+| `/` | Landing page: what Engram is, how the pipeline works, and what is built so far |
+| `/ask` | Ask a question and read the cited answer |
+| `/sources` | Upload documents, connect GitHub repositories and watch ingestion jobs |
+
+The landing page's content lives in `frontend/lib/system.ts`. Each stage, store and phase there is marked `live` or `planned`, and the page draws planned parts dashed. Update that file when a phase lands.
+
+Run these commands from `frontend/`. The development server forwards `/api` requests to the API on port 8000, so start the API before using `/ask` or `/sources`. The landing page works without it.
 
 | Task | Command |
 |---|---|
 | Install dependencies | `npm install` |
 | Run the app on port 3000 | `npm run dev` |
 | Run all tests | `npm test` |
-| Run one test file | `npx vitest run components/AnswerView.test.tsx` |
+| Run one test file | `npm test -- components/AnswerView.test.tsx` |
 | Lint | `npm run lint` |

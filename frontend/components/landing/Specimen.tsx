@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { SourceNote, splitAnswer } from "@/components/AnswerView";
+import Reveal from "@/components/motion/Reveal";
 import type { Citation } from "@/lib/api";
 
 type Sample = { question: string; answer: string; citations: Citation[] };
@@ -21,7 +22,7 @@ export default function Specimen({ sample }: { sample: Sample }) {
         Select a marker in the answer to read the passage behind it. The real app works the same
         way on your own documents.
       </p>
-      <div className="sp-sheet">
+      <Reveal className="sp-sheet">
         <div className="sp-answer">
           <p className="sp-tags">
             <span className="status-tag">Sample answer</span>
@@ -58,7 +59,7 @@ export default function Specimen({ sample }: { sample: Sample }) {
             <p className="hint">Select a marker to read the passage it cites.</p>
           )}
         </aside>
-      </div>
+      </Reveal>
     </section>
   );
 }

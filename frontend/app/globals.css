@@ -714,6 +714,12 @@ input[type="checkbox"] {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* A still, full bar, so a running job doesn't look like an empty box. */
+  .job-bar::after {
+    width: 100%;
+    animation: none;
+  }
+
   *,
   *::before,
   *::after {
