@@ -1,6 +1,6 @@
 # Engram Phase 2: Advanced Retrieval
 
-**Status:** Draft for owner review, 2026-11-13.
+**Status:** Approved on 2026-11-13.
 **Parent documents:** `Plan.md` (§ references point to it) and `docs/specs/2026-11-07-phase-1-foundation-design.md`.
 
 This spec covers Phase 2 only. Source-code and OpenAPI ingestion follow it as a separate step with its own spec, before Phase 3.
