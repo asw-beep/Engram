@@ -3,6 +3,7 @@
 import { type FormEvent, type KeyboardEvent, useState } from "react";
 
 import AnswerView from "@/components/AnswerView";
+import AskProgress from "@/components/AskProgress";
 import { ApiError, askQuestion, type QuestionResponse } from "@/lib/api";
 
 const MAX_QUESTION_CHARS = 2000;
@@ -55,11 +56,17 @@ export default function AskForm() {
           onKeyDown={onKeyDown}
         />
         <button type="submit" className="ask-button" disabled={asking || !question.trim()}>
-          {asking ? "Asking…" : "Ask"}
+          {asking ? (
+            "Asking…"
+          ) : (
+            <>
+              Ask <span aria-hidden="true">↵</span>
+            </>
+          )}
         </button>
       </form>
       <div className="outcome" aria-live="polite" aria-busy={asking}>
-        {asking && <p className="status">Searching your documents and checking citations…</p>}
+        {asking && <AskProgress />}
         {state.status === "failed" && <p className="notice error">{state.message}</p>}
         {state.status === "answered" && <AnswerView response={state.response} />}
       </div>

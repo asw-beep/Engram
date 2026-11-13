@@ -70,6 +70,7 @@ export default function SourcesPage() {
 
   return (
     <main className="page">
+      <p className="label page-kicker">Ingestion</p>
       <h1 className="page-title">Sources</h1>
       <p className="lede">
         Upload documents or connect a GitHub repository to make them searchable. Processing runs in

@@ -64,7 +64,7 @@ function Answer({ answer, citations }: { answer: string; citations: Citation[] }
       </p>
       <aside id="source-margin" className="margin" aria-live="polite">
         {shown ? (
-          <SourceNote citation={shown} highlighted />
+          <SourceNote key={shown.marker} citation={shown} highlighted />
         ) : (
           <p className="hint">Select a marker to read the passage it cites.</p>
         )}

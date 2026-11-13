@@ -62,3 +62,16 @@ test("the form shows a loading state while asking", async () => {
   expect(screen.getByRole("button", { name: "Asking…" })).toBeDisabled();
   expect(screen.getByText(/searching your documents/i)).toBeInTheDocument();
 });
+
+test("the search stages show while asking, hidden from screen readers", async () => {
+  vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => {})));
+  await ask();
+  const steps = screen.getByText("Retrieve").closest("ol");
+  expect(steps).toHaveAttribute("aria-hidden", "true");
+  expect(steps).toHaveTextContent("RetrieveGenerateVerify");
+});
+
+test("the ask button keeps the name Ask", () => {
+  render(<AskForm />);
+  expect(screen.getByRole("button", { name: "Ask" })).toHaveTextContent("↵");
+});
