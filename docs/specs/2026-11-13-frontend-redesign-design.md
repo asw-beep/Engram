@@ -1,6 +1,6 @@
 # Engram Frontend Redesign: Blueprint
 
-**Status:** Draft for owner review, 2026-11-13.
+**Status:** Approved on 2026-11-13.
 **Parent documents:** `Plan.md` and `docs/specs/2026-11-07-phase-1-foundation-design.md` (§ "Ask screen" and "Sources screen").
 
 This spec covers the frontend redesign only. Phases 2, 3 and 4 follow it, each with its own spec and plan.
