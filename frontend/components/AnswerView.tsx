@@ -94,7 +94,7 @@ export function splitAnswer(answer: string, citations: Map<number, Citation>): (
   return segments;
 }
 
-function SourceNote({ citation, highlighted = false }: { citation: Citation; highlighted?: boolean }) {
+export function SourceNote({ citation, highlighted = false }: { citation: Citation; highlighted?: boolean }) {
   const details = [citation.source_name, location(citation), revision(citation.revision)].filter(Boolean);
   const url = safeUrl(citation.url);
   return (

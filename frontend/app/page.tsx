@@ -2,10 +2,21 @@ import BuildLog from "@/components/landing/BuildLog";
 import Closing from "@/components/landing/Closing";
 import Hero from "@/components/landing/Hero";
 import Nav from "@/components/landing/Nav";
+import Pipeline from "@/components/landing/Pipeline";
 import Problem from "@/components/landing/Problem";
+import Specimen from "@/components/landing/Specimen";
 import System from "@/components/landing/System";
 import Ticker from "@/components/landing/Ticker";
-import { GITHUB_URL, PHASES, RULES, SOURCE_TYPES, STORES } from "@/lib/system";
+import {
+  GITHUB_URL,
+  INGESTION_STAGES,
+  PHASES,
+  QUERY_STAGES,
+  RULES,
+  SAMPLE,
+  SOURCE_TYPES,
+  STORES,
+} from "@/lib/system";
 
 import "./landing.css";
 
@@ -17,6 +28,8 @@ export default function LandingPage() {
         <Hero githubUrl={GITHUB_URL} phases={PHASES} />
         <Ticker types={SOURCE_TYPES} />
         <Problem />
+        <Pipeline ingestion={INGESTION_STAGES} query={QUERY_STAGES} />
+        <Specimen sample={SAMPLE} />
         <System stores={STORES} rules={RULES} />
         <BuildLog phases={PHASES} />
       </main>

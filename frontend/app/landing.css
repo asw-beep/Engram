@@ -618,3 +618,259 @@ html.lenis body {
     display: none;
   }
 }
+
+/* Pipeline */
+
+.pl-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  min-height: 21rem;
+  margin-top: 3rem;
+  padding-right: calc(42% + 2.5rem);
+}
+
+.pl-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  list-style: none;
+}
+
+.pl-group-name {
+  color: var(--muted);
+}
+
+.pl-stage {
+  display: contents;
+}
+
+.pl-button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  min-height: 6.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background-color 0.2s,
+    color 0.2s,
+    border-color 0.2s;
+}
+
+.pl-button.planned {
+  border-style: dashed;
+  color: var(--muted);
+}
+
+.pl-button:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.pl-button[aria-pressed="true"] {
+  border-style: solid;
+  border-color: var(--signal);
+  background: var(--signal);
+  color: var(--on-signal);
+}
+
+.pl-number {
+  opacity: 0.7;
+}
+
+.pl-label {
+  overflow-wrap: anywhere;
+}
+
+.pl-button .status-tag {
+  margin-top: auto;
+}
+
+.pl-note {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 42%;
+  padding: 1.5rem;
+  border: 1px solid var(--ink);
+  border-left: 4px solid var(--signal);
+  background: var(--paper);
+}
+
+.pl-note-head {
+  color: var(--muted);
+}
+
+.pl-note-title {
+  margin-top: 1.25rem;
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.pl-note-text {
+  margin-top: 1rem;
+  font-size: 1.0625rem;
+  line-height: 1.55;
+}
+
+/* Every note in a plain list: narrow screens, and reduced motion. */
+.pl-body[data-show-all="true"] {
+  min-height: 0;
+  padding-right: 0;
+}
+
+.pl-body[data-show-all="true"] .pl-row {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+
+.pl-body[data-show-all="true"] .pl-stage {
+  display: block;
+  margin-top: 0.75rem;
+}
+
+.pl-body[data-show-all="true"] .pl-button {
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  min-height: 0;
+}
+
+.pl-body[data-show-all="true"] .pl-button .status-tag {
+  margin: 0 0 0 auto;
+}
+
+.pl-body[data-show-all="true"] .pl-note {
+  position: static;
+  width: auto;
+  border-top: 0;
+  border-left-width: 1px;
+  border-left-color: var(--ink);
+}
+
+.pl-body[data-show-all="true"] .pl-note-title {
+  display: none;
+}
+
+.pl-body[data-show-all="true"] .pl-note-text {
+  margin-top: 0.5rem;
+  font-size: 1rem;
+}
+
+@media (max-width: 52rem) {
+  .pl-body {
+    min-height: 0;
+    padding-right: 0;
+  }
+
+  .pl-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .pl-stage {
+    display: block;
+    margin-top: 0.75rem;
+  }
+
+  .pl-button {
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+    min-height: 0;
+  }
+
+  .pl-button .status-tag {
+    margin: 0 0 0 auto;
+  }
+
+  .pl-note,
+  .pl-note[hidden] {
+    position: static;
+    display: block;
+    width: auto;
+    border-top: 0;
+    border-left-width: 1px;
+    border-left-color: var(--ink);
+  }
+
+  .pl-note-title {
+    display: none;
+  }
+
+  .pl-note-text {
+    margin-top: 0.5rem;
+    font-size: 1rem;
+  }
+}
+
+/* Specimen */
+
+.sp-sheet {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  margin-top: 3rem;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+}
+
+.sp-answer {
+  padding: clamp(1.25rem, 3vw, 2.5rem);
+}
+
+.sp-question {
+  margin: 1.25rem 0 1rem;
+  color: var(--muted);
+  font-family: var(--font-code);
+  font-size: 0.875rem;
+}
+
+.sp-answer .answer-text {
+  font-size: clamp(1.125rem, 1.8vw, 1.5rem);
+  line-height: 1.55;
+  white-space: normal;
+}
+
+.sp-source {
+  padding: clamp(1.25rem, 3vw, 2.5rem);
+  border-left: 1px solid var(--ink);
+}
+
+.sp-source .source-note {
+  animation: note-in 0.3s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@keyframes note-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+}
+
+@media (max-width: 52rem) {
+  .sp-sheet {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sp-source {
+    border-top: 1px solid var(--ink);
+    border-left: 0;
+  }
+}
