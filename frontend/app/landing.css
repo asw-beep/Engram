@@ -488,7 +488,7 @@ html.lenis body {
   border-left: 1px solid var(--ink);
 }
 
-.bl-phase.planned {
+.bl-phase.bl-planned {
   border-left-style: dashed;
   color: var(--muted);
 }
@@ -604,7 +604,7 @@ html.lenis body {
     border-bottom: 1px solid var(--ink);
   }
 
-  .bl-phase.planned {
+  .bl-phase.bl-planned {
     border-bottom-style: dashed;
   }
 }
@@ -770,6 +770,7 @@ html.lenis body {
 }
 
 .pl-body[data-show-all="true"] .pl-note-text {
+  max-width: 68ch;
   margin-top: 0.5rem;
   font-size: 1rem;
 }
@@ -873,4 +874,14 @@ html.lenis body {
     border-top: 1px solid var(--ink);
     border-left: 0;
   }
+}
+
+/* Set before first paint when motion is allowed, and cleared when the entrance starts. */
+.motion-pending .hero-line > span,
+.motion-pending .hero-kicker,
+.motion-pending .hero-lede,
+.motion-pending .hero-actions,
+.motion-pending .qd,
+.motion-pending .title-block {
+  visibility: hidden;
 }

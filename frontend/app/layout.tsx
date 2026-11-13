@@ -13,7 +13,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${text.variable} ${mono.variable}`}>
+    // The landing page's pre-paint script adds a class to <html>, which React must leave alone.
+    <html lang="en" className={`${text.variable} ${mono.variable}`} suppressHydrationWarning>
       <body>{children}</body>
     </html>
   );

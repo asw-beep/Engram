@@ -13,7 +13,7 @@ export default function SmoothScroll({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (reduced) return;
-    const lenis = new Lenis();
+    const lenis = new Lenis({ anchors: true });
     lenis.on("scroll", ScrollTrigger.update);
     const tick = (seconds: number) => lenis.raf(seconds * 1000);
     gsap.ticker.add(tick);

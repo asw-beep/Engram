@@ -1,12 +1,14 @@
 import BuildLog from "@/components/landing/BuildLog";
 import Closing from "@/components/landing/Closing";
 import Hero from "@/components/landing/Hero";
+import LandingMotion, { PENDING_SCRIPT } from "@/components/landing/LandingMotion";
 import Nav from "@/components/landing/Nav";
 import Pipeline from "@/components/landing/Pipeline";
 import Problem from "@/components/landing/Problem";
 import Specimen from "@/components/landing/Specimen";
 import System from "@/components/landing/System";
 import Ticker from "@/components/landing/Ticker";
+import SmoothScroll from "@/components/motion/SmoothScroll";
 import {
   GITHUB_URL,
   INGESTION_STAGES,
@@ -22,7 +24,9 @@ import "./landing.css";
 
 export default function LandingPage() {
   return (
-    <>
+    <SmoothScroll>
+      <script dangerouslySetInnerHTML={{ __html: PENDING_SCRIPT }} />
+      <LandingMotion />
       <Nav githubUrl={GITHUB_URL} />
       <main className="landing">
         <Hero githubUrl={GITHUB_URL} phases={PHASES} />
@@ -34,6 +38,6 @@ export default function LandingPage() {
         <BuildLog phases={PHASES} />
       </main>
       <Closing githubUrl={GITHUB_URL} />
-    </>
+    </SmoothScroll>
   );
 }

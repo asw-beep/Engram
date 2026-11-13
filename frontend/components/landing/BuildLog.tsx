@@ -11,7 +11,7 @@ export default function BuildLog({ phases }: { phases: Phase[] }) {
       </div>
       <ol className="bl-phases">
         {phases.map((phase) => (
-          <li key={phase.id} className={phase.status === "planned" ? "bl-phase planned" : "bl-phase"}>
+          <li key={phase.id} className={phase.status === "planned" ? "bl-phase bl-planned" : "bl-phase"}>
             <span className="label bl-head">
               <span>Phase {phase.id}</span>
               <span className="bl-status">{phase.status === "live" ? "built" : "planned"}</span>
