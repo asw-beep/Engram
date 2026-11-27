@@ -79,6 +79,23 @@ Each row compares two configurations on the same 73 answerable and 12 unanswerab
 
 Retrieval only, from the question to ranked passages, with the models already loaded, on the machine that ran `eval.run`, not the production server. Generation isn't included.
 
+## Answer review (manual sample)
+
+| Question | Outcome | Citations | Supports | Partly | Does not support | Names a passage |
+|---|---|---:|---:|---:|---:|---|
+| k8s-002 | answered | 2 | 1 | 1 | 0 | no |
+| k8s-015 | answered | 2 | 2 | 0 | 0 | no |
+| k8s-028 | answered | 2 | 2 | 0 | 0 | no |
+| k8s-041 | answered | 2 | 2 | 0 | 0 | no |
+| k8s-054 | answered | 4 | 4 | 0 | 0 | no |
+| k8s-068 | answered | 3 | 3 | 0 | 0 | no |
+| k8s-081 | answered | 1 | 0 | 1 | 0 | no |
+| k8s-095 | answered | 2 | 2 | 0 | 0 | no |
+| k8s-108 | answered | 2 | 2 | 0 | 0 | no |
+| k8s-121 | answered | 5 | 5 | 0 | 0 | no |
+
+A manual sample, not a measurement: 10 of 10 sampled questions were asked (every eighth answerable `test` question). They were asked with `hybrid` retrieval, reranking on, and answered by `nvidia/nemotron-3.5-super-vl:free`. Each citation was read against the section it cites by the developer during implementation, not yet checked by the owner, by this rule: a citation supports its sentence when the passage states the claim, or its own share of it when the sentence cites several passages; partly when it states only some of what it is cited for; does not support when it states none of it. Of 25 citations, 23 support the claim they are attached to, 2 partly support it and 0 don't. 0 of 10 answers name a passage ("Passage 2", "the first passage") instead of citing it with a marker.
+
 ## Plan.md §10.5 targets
 
 | Target | dense | hybrid | dense_rerank | hybrid_rerank |

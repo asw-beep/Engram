@@ -50,3 +50,11 @@ def test_boundary_differs_per_request():
 def test_question_comes_after_the_passages():
     user = build_messages("what is a pod?", [passage("hello")], boundary="abc")[1]["content"]
     assert user.index("PASSAGE 1 END abc") < user.index("what is a pod?")
+
+
+def test_system_prompt_keeps_passage_numbers_in_markers():
+    system = build_messages("q", [], boundary="b")[0]["content"]
+    assert (
+        "Refer to passages only through markers such as [1]. Never write 'Passage 1' or "
+        "'the first passage' in the answer." in system
+    )

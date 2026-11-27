@@ -8,6 +8,7 @@ listed as "not run", never estimated (CLAUDE.md, "Evaluation claims").
 
 import argparse
 import json
+import re
 from collections import Counter
 from pathlib import Path
 
@@ -29,6 +30,13 @@ PAIRS = (
     ("hybrid_rerank", "dense"),
     ("hybrid_rerank", "dense_rerank"),
 )
+VERDICTS = ("supports", "partly", "does not support")
+# How an answer names a passage instead of citing it with a marker such as [1].
+PASSAGE_NAMED = re.compile(
+    r"\bpassages?\s+\d+|\bthe\s+(?:first|second|third|fourth|fifth|last|next|previous)\s+"
+    r"passage",
+    re.IGNORECASE,
+)
 RECALL_TARGET = 0.85
 LATENCY_TARGET_MS = 5000
 
@@ -38,10 +46,11 @@ def render(
     questions: list[Question],
     reviewed: bool,
     calibration: dict[str, dict] | None = None,
+    answer_review: dict | None = None,
 ) -> str:
     parts = [_heading(reviewed), _dataset(results, questions), _quality(results)]
     parts += [_by_kind(results, questions), _gate(results, calibration or {})]
-    parts += [_paired(results, questions), _latency(results)]
+    parts += [_paired(results, questions), _latency(results), _answer_review(answer_review)]
     parts += [_targets(results, reviewed), _limits(questions, reviewed)]
     return "\n\n".join(parts) + "\n"
 
@@ -291,6 +300,60 @@ def _latency(results: dict[str, dict]) -> str:
     )
 
 
+def _answer_review(review: dict | None) -> str:
+    heading = "## Answer review (manual sample)\n\n"
+    if not review:
+        return (
+            heading + "No answer review has been made. `uv run python -m eval.answers` asks "
+            "the sample, and its reviewer fills `backend/eval/results/answer_review.json`."
+        )
+    answers = review["answers"]
+    rows, totals, named, complete = [], dict.fromkeys(VERDICTS, 0), 0, True
+    for answer in answers:
+        verdicts = [citation["review"].get("verdict", "") for citation in answer["citations"]]
+        names = bool(PASSAGE_NAMED.search(answer.get("answer") or ""))
+        named += names
+        if not all(verdicts):
+            complete = False
+            counts = "not reviewed | – | –"
+        else:
+            counts = " | ".join(str(verdicts.count(verdict)) for verdict in VERDICTS)
+            for verdict in verdicts:
+                totals[verdict] = totals.get(verdict, 0) + 1
+        rows.append(
+            f"| {answer['id']} | {answer['outcome']} | {len(verdicts)} | {counts} | "
+            f"{'yes' if names else 'no'} |"
+        )
+    rule = f", by this rule: {review['rule']}" if review.get("rule") else ""
+    settings = review.get("settings") or {}
+    models = sorted({answer["model"] for answer in answers if answer.get("model")})
+    asked_with = (
+        f" They were asked with `{settings['retrieval_mode']}` retrieval, reranking "
+        f"{'on' if settings.get('rerank_enabled') else 'off'}, and answered by "
+        + ", ".join(f"`{model}`" for model in models)
+        + "."
+        if settings.get("retrieval_mode") and models
+        else ""
+    )
+    tally = (
+        f" Of {sum(totals.values())} citations, {totals['supports']} support the claim they "
+        f"are attached to, {totals['partly']} partly support it and "
+        f"{totals['does not support']} don't."
+        if complete
+        else " Some citations aren't reviewed yet."
+    )
+    return (
+        heading + "| Question | Outcome | Citations | Supports | Partly | Does not support | "
+        "Names a passage |\n|---|---|---:|---:|---:|---:|---|\n" + "\n".join(rows) + "\n\n"
+        f"A manual sample, not a measurement: {len(answers)} of {len(review['sampled'])} "
+        "sampled questions were asked (every eighth answerable `test` question)."
+        f"{asked_with} Each citation was read against the section it cites by "
+        f"{review.get('reviewer') or 'nobody yet'}{rule}.{tally} {named} of {len(answers)} answers "
+        'name a passage ("Passage 2", "the first passage") instead of citing it with a '
+        "marker."
+    )
+
+
 def _targets(results: dict[str, dict], reviewed: bool) -> str:
     cells = []
     for config in CONFIGS:
@@ -382,7 +445,11 @@ def main(argv: list[str] | None = None) -> int:
         if calibration_file.exists()
         else {}
     )
-    text = render(results, load_questions(args.questions), reviewed, calibration)
+    review_file = args.results / "answer_review.json"
+    answer_review = (
+        json.loads(review_file.read_text(encoding="utf-8")) if review_file.exists() else None
+    )
+    text = render(results, load_questions(args.questions), reviewed, calibration, answer_review)
     args.out.write_text(text, encoding="utf-8")
     print(f"Wrote {args.out.as_posix()} ({', '.join(results) or 'no runs'})")
     return 0

@@ -1,0 +1,480 @@
+{
+  "created_at": "2026-11-27T10:45:01+00:00",
+  "questions_file": "eval/questions.jsonl",
+  "settings": {
+    "retrieval_mode": "hybrid",
+    "rerank_enabled": true,
+    "rerank_min_score": 0.74,
+    "dense_min_score": 0.5,
+    "llm_model": "nvidia/nemotron-3.5-super-vl:free",
+    "llm_fallback_model": "google/gemma-4-31b-it:free"
+  },
+  "reviewer": "the developer during implementation, not yet checked by the owner",
+  "sampled": [
+    "k8s-002",
+    "k8s-015",
+    "k8s-028",
+    "k8s-041",
+    "k8s-054",
+    "k8s-068",
+    "k8s-081",
+    "k8s-095",
+    "k8s-108",
+    "k8s-121"
+  ],
+  "answers": [
+    {
+      "id": "k8s-002",
+      "query_log": "35d04c36-c091-4364-8c56-c1ec1f8b1f22",
+      "question": "In what order does a StatefulSet create, scale and terminate its Pods by default?",
+      "kind": "conceptual",
+      "outcome": "answered",
+      "answer": "By default, a StatefulSet uses OrderedReady pod management, which implements the Deployment and Scaling Guarantees [7][1]. Pods are created sequentially in order from {0..N-1} [1][7]. Scaling operations are applied one Pod at a time, and before a scaling operation is applied to a Pod, all of its predecessors must be Running and Ready [1][7]. Pods are terminated in reverse order, from {N-1..0}, and before a Pod is terminated, all of its successors must be completely shutdown [1][7].",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "citations": [
+        {
+          "marker": 7,
+          "path": "content/en/docs/concepts/workloads/controllers/statefulset.md",
+          "headings": [
+            "Deployment and Scaling Guarantees",
+            "Pod Management Policies",
+            "OrderedReady Pod Management"
+          ],
+          "review": {
+            "verdict": "partly",
+            "reason": "states only that OrderedReady is the default and implements the guarantees; the create, scale and terminate orders it is also cited for are only in [1]"
+          }
+        },
+        {
+          "marker": 1,
+          "path": "content/en/docs/concepts/workloads/controllers/statefulset.md",
+          "headings": [
+            "Deployment and Scaling Guarantees"
+          ],
+          "review": {
+            "verdict": "supports",
+            "reason": "lists creation in order 0..N-1, termination in reverse and the predecessor and successor rules"
+          }
+        }
+      ],
+      "timings_ms": {
+        "retrieve": 9614,
+        "rerank": 5864,
+        "generate": 5338,
+        "total": 22888
+      }
+    },
+    {
+      "id": "k8s-015",
+      "query_log": "d8e8e627-287d-40de-9a64-f532fc2d11cd",
+      "question": "What is a mirror Pod?",
+      "kind": "conceptual",
+      "outcome": "answered",
+      "answer": "A mirror Pod is a Pod object that the kubelet automatically creates on the Kubernetes API server for each static Pod running on a node, to track that static Pod [1][2]. It makes the node's Pods visible on the API server but they cannot be controlled from there, and changes to the mirror Pod do not propagate back to the static Pod [1][2]. The mirror Pod's name is suffixed with the node hostname preceded by a hyphen, labels are propagated from the static Pod to the mirror Pod, and all mirror Pods carry the `kubernetes.io/config.mirror` annotation [1][2]. Deleting a mirror Pod via `kubectl` does not remove the static Pod; the kubelet recreates the mirror Pod [1].",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "citations": [
+        {
+          "marker": 1,
+          "path": "content/en/docs/concepts/workloads/pods/static-pods.md",
+          "headings": [
+            "Mirror Pods"
+          ],
+          "review": {
+            "verdict": "supports",
+            "reason": "states the mirror Pod per static Pod, visible but not controllable, the hostname suffix, label propagation and that kubectl delete gets it recreated"
+          }
+        },
+        {
+          "marker": 2,
+          "path": "content/en/docs/concepts/cluster-administration/admission-webhooks-good-practices.md",
+          "headings": [
+            "Mutation scope and field considerations",
+            "Don't change immutable objects"
+          ],
+          "review": {
+            "verdict": "supports",
+            "reason": "gives its share: the mirror Pod tracks the static Pod, changes don't propagate back, and the kubernetes.io/config.mirror annotation"
+          }
+        }
+      ],
+      "timings_ms": {
+        "retrieve": 162,
+        "rerank": 754,
+        "generate": 7421,
+        "total": 8338
+      }
+    },
+    {
+      "id": "k8s-028",
+      "query_log": "bbba6346-98b4-48c4-9b57-d093e5e2c572",
+      "question": "How do I make a PersistentVolumeClaim bigger after it was created?",
+      "kind": "conceptual",
+      "outcome": "answered",
+      "answer": "Edit the PersistentVolumeClaim object and specify a larger size; this triggers expansion of the existing backing PersistentVolume, and no new PersistentVolume is created [1]. Expansion only works if the storage class’s `allowVolumeExpansion` field is set to `true` [1], and supported volume types include CSI, flexVolume (deprecated), and portworxVolume (deprecated) [1]. Do not directly edit the PersistentVolume capacity and then match the PVC size to it, because the control plane will treat the sizes as matching and skip the resize [1]. If expansion fails, you can retry with a smaller proposed size by editing `.spec.resources` on the PVC, but the new value must still be higher than `.status.capacity` since shrinking below the current size is not supported [2].",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "citations": [
+        {
+          "marker": 1,
+          "path": "content/en/docs/concepts/storage/persistent-volumes.md",
+          "headings": [
+            "Lifecycle of a volume and claim",
+            "Expanding Persistent Volumes Claims"
+          ],
+          "review": {
+            "verdict": "supports",
+            "reason": "states editing the PVC to a larger size, no new PV, allowVolumeExpansion, the volume types and the warning against editing the PV"
+          }
+        },
+        {
+          "marker": 2,
+          "path": "content/en/docs/concepts/storage/persistent-volumes.md",
+          "headings": [
+            "Lifecycle of a volume and claim",
+            "Expanding Persistent Volumes Claims",
+            "Recovering from Failure when Expanding Volumes"
+          ],
+          "review": {
+            "verdict": "supports",
+            "reason": "states retrying with a smaller size through .spec.resources, still above .status.capacity, and no shrinking"
+          }
+        }
+      ],
+      "timings_ms": {
+        "retrieve": 162,
+        "rerank": 941,
+        "generate": 5203,
+        "total": 6311
+      }
+    },
+    {
+      "id": "k8s-041",
+      "query_log": "af022f2b-4988-4d1e-8267-77ac79f78647",
+      "question": "How do taints and tolerations work together to keep Pods off some nodes?",
+      "kind": "conceptual",
+      "outcome": "answered",
+      "answer": "Taints are applied to nodes to repel a set of pods, while tolerations are applied to pods [1]. Together they ensure that pods are not scheduled onto inappropriate nodes: a tainted node should not accept any pods that do not tolerate the taints [1]. Specifically, with the NoSchedule effect, no new pods are scheduled on the tainted node unless they have a matching toleration [7]. A toleration matches a taint when the keys and effects are the same (and the operator/value conditions are met) [7]. If a pod has a matching toleration, the scheduler may schedule it on the tainted node, but toleration only allows scheduling—it does not guarantee it [1]. If the pod lacks a matching toleration, it is kept off the tainted node [1][7].",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "citations": [
+        {
+          "marker": 1,
+          "path": "content/en/docs/concepts/scheduling-eviction/taint-and-toleration.md",
+          "headings": [],
+          "review": {
+            "verdict": "supports",
+            "reason": "states taints repel pods, tolerations go on pods, they work together, and a toleration allows but doesn't guarantee scheduling"
+          }
+        },
+        {
+          "marker": 7,
+          "path": "content/en/docs/concepts/scheduling-eviction/taint-and-toleration.md",
+          "headings": [
+            "Concepts"
+          ],
+          "review": {
+            "verdict": "supports",
+            "reason": "states the NoSchedule effect and when a toleration matches a taint"
+          }
+        }
+      ],
+      "timings_ms": {
+        "retrieve": 92,
+        "rerank": 951,
+        "generate": 5891,
+        "total": 6945
+      }
+    },
+    {
+      "id": "k8s-054",
+      "query_log": "8d263393-6564-47e3-b14b-954864b1b44c",
+      "question": "How does API Priority and Fairness keep the API server responsive when it is overloaded?",
+      "kind": "conceptual",
+      "outcome": "answered",
+      "answer": "API Priority and Fairness keeps the API server responsive by classifying incoming requests with FlowSchemas and assigning them to priority levels [4], and by giving each priority level separate concurrency limits so requests at different priority levels cannot starve each other [4]. It introduces limited queuing so that requests are not rejected during very brief bursts [2]. Within a priority level, a fair-queuing algorithm processes requests from different flows so one stream of traffic, such as a buggy controller, cannot starve others [2][3][4]. Requests are assigned to flows identified by a FlowSchema plus a flow distinguisher, and shuffle sharding insulates low-intensity flows from high-intensity flows [3]. Higher-priority calls are fulfilled before lower-priority calls, while lower-priority calls can be queued or rejected under contention [1]. Queuing also prevents bursty traffic from causing failed requests when the average load is acceptably low [3][4].",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "citations": [
+        {
+          "marker": 4,
+          "path": "content/en/docs/concepts/cluster-administration/flow-control.md",
+          "headings": [
+            "Concepts"
+          ],
+          "review": {
+            "verdict": "supports",
+            "reason": "states FlowSchema classification, priority levels with separate concurrency limits, fair queuing and queuing for bursty traffic"
+          }
+        },
+        {
+          "marker": 2,
+          "path": "content/en/docs/concepts/cluster-administration/flow-control.md",
+          "headings": [],
+          "review": {
+            "verdict": "supports",
+            "reason": "states the limited queuing for brief bursts and that a poorly behaved controller need not starve others"
+          }
+        },
+        {
+          "marker": 3,
+          "path": "content/en/docs/concepts/cluster-administration/flow-control.md",
+          "headings": [
+            "Concepts",
+            "Queuing"
+          ],
+          "review": {
+            "verdict": "supports",
+            "reason": "states fair queuing within a priority level, flows as FlowSchema plus distinguisher, and shuffle sharding"
+          }
+        },
+        {
+          "marker": 1,
+          "path": "content/en/docs/concepts/security/multi-tenancy.md",
+          "headings": [
+            "Additional Considerations",
+            "API Priority and Fairness"
+          ],
+          "review": {
+            "verdict": "supports",
+            "reason": "states higher-priority calls go first and lower-priority ones are queued or rejected under contention (the multi-tenancy page's simplified account)"
+          }
+        }
+      ],
+      "timings_ms": {
+        "retrieve": 170,
+        "rerank": 727,
+        "generate": 8152,
+        "total": 9055
+      }
+    },
+    {
+      "id": "k8s-068",
+      "query_log": "ce4c27c6-80b2-425b-b8a3-67fbaf66d7dc",
+      "question": "What does podManagementPolicy: Parallel change for a StatefulSet?",
+      "kind": "exact_term",
+      "outcome": "answered",
+      "answer": "`podManagementPolicy: Parallel` changes a StatefulSet so that the controller launches or terminates all Pods in parallel instead of waiting for each Pod to become Running and Ready (or completely terminated) before moving on to the next one [1]. Specifically:\n\n- For scaling operations, all Pods are created or terminated simultaneously [1].\n- For rolling updates when `.spec.updateStrategy.rollingUpdate.maxUnavailable` is greater than 1, the controller terminates and creates up to `maxUnavailable` Pods simultaneously (\"bursting\"), which can speed up updates but may result in Pods becoming ready out of order, making it unsuitable for applications requiring strict ordering [1].\n- It relaxes the StatefulSet's ordering guarantees while still preserving its uniqueness and identity guarantees [3].\n- Under the `Recreate` update strategy, after all old Pods have terminated, the new Pods are all recreated at once rather than one at a time in ascending ordinal order [2].",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "citations": [
+        {
+          "marker": 1,
+          "path": "content/en/docs/concepts/workloads/controllers/statefulset.md",
+          "headings": [
+            "Deployment and Scaling Guarantees",
+            "Pod Management Policies",
+            "Parallel Pod Management"
+          ],
+          "review": {
+            "verdict": "supports",
+            "reason": "states parallel launch and termination, simultaneous scaling and maxUnavailable bursting with out-of-order readiness"
+          }
+        },
+        {
+          "marker": 3,
+          "path": "content/en/docs/concepts/workloads/controllers/statefulset.md",
+          "headings": [
+            "Deployment and Scaling Guarantees",
+            "Pod Management Policies"
+          ],
+          "review": {
+            "verdict": "supports",
+            "reason": "states the policy relaxes ordering while keeping uniqueness and identity"
+          }
+        },
+        {
+          "marker": 2,
+          "path": "content/en/docs/concepts/workloads/controllers/statefulset.md",
+          "headings": [
+            "Recreate"
+          ],
+          "review": {
+            "verdict": "supports",
+            "reason": "states that under Recreate with Parallel all new Pods are created at once"
+          }
+        }
+      ],
+      "timings_ms": {
+        "retrieve": 124,
+        "rerank": 776,
+        "generate": 7776,
+        "total": 8678
+      }
+    },
+    {
+      "id": "k8s-081",
+      "query_log": "c03f734b-d516-4c27-83ab-016827965fb3",
+      "question": "What does Bidirectional mount propagation do?",
+      "kind": "exact_term",
+      "outcome": "answered",
+      "answer": "Bidirectional mount propagation behaves the same as `HostToContainer` — the volume mount receives all subsequent mounts mounted to the volume or its subdirectories by the host or by other Pods using `Bidirectional` propagation — and, in addition, all volume mounts created by the container are propagated back to the host and to all containers of all Pods that use the same volume [1]. It is equivalent to `rshared` mount propagation as described in `mount(8)` [1]. It can damage the host operating system, so it is allowed only in privileged containers, and any mounts created by containers must be unmounted by those containers on termination [1].",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "citations": [
+        {
+          "marker": 1,
+          "path": "content/en/docs/concepts/storage/volumes.md",
+          "headings": [
+            "Mount propagation"
+          ],
+          "review": {
+            "verdict": "partly",
+            "reason": "states the Bidirectional behaviour, rshared, privileged-only and unmount-on-termination; the chunk starts mid-way through HostToContainer, so 'all subsequent mounts by the host, or its subdirectories' isn't in it"
+          }
+        }
+      ],
+      "timings_ms": {
+        "retrieve": 117,
+        "rerank": 881,
+        "generate": 5789,
+        "total": 6790
+      }
+    },
+    {
+      "id": "k8s-095",
+      "query_log": "f4f9d3bc-5fe1-4d87-a5fe-e63daa649d95",
+      "question": "What is the node.kubernetes.io/out-of-service taint used for?",
+      "kind": "exact_term",
+      "outcome": "answered",
+      "answer": "The `node.kubernetes.io/out-of-service` taint is manually added to a Node (with `NoExecute` or `NoSchedule` effect) to mark it out-of-service, typically after confirming the node is shut down or powered off. When a node has this taint, pods without matching tolerations are forcefully deleted and their volume detach operations happen immediately, allowing those pods to recover quickly on a different node [1]. It is also one of the conditions under which the Pod garbage collector cleans up terminating pods bound to a non-ready node [2].",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "citations": [
+        {
+          "marker": 1,
+          "path": "content/en/docs/concepts/cluster-administration/node-shutdown.md",
+          "headings": [
+            "Non-graceful node shutdown handling"
+          ],
+          "review": {
+            "verdict": "supports",
+            "reason": "states the manual NoExecute or NoSchedule taint, checking the node is shut down, force deletion without tolerations and immediate volume detach"
+          }
+        },
+        {
+          "marker": 2,
+          "path": "content/en/docs/concepts/workloads/pods/pod-lifecycle.md",
+          "headings": [
+            "Termination of Pods",
+            "Garbage collection of Pods"
+          ],
+          "review": {
+            "verdict": "supports",
+            "reason": "lists terminating Pods on a non-ready node with this taint among PodGC's cleanup conditions"
+          }
+        }
+      ],
+      "timings_ms": {
+        "retrieve": 119,
+        "rerank": 976,
+        "generate": 3724,
+        "total": 4826
+      }
+    },
+    {
+      "id": "k8s-108",
+      "query_log": "ae719385-d3ac-452f-9dab-53c849504c9f",
+      "question": "How does node-pressure eviction by the kubelet differ from API-initiated eviction?",
+      "kind": "multi_section",
+      "outcome": "answered",
+      "answer": "Node-pressure eviction is triggered by the kubelet itself when node resources such as memory, disk space, or filesystem inodes reach specific consumption levels, and it proactively fails pods to reclaim resources [1]. API-initiated eviction, by contrast, is requested by a user or controller through the Eviction API (e.g., kubectl drain), which creates an Eviction object and causes the API server to terminate the Pod like a policy-controlled DELETE operation [2].\n\nKey differences:\n- PodDisruptionBudget: Node-pressure eviction does not respect PodDisruptionBudgets, whereas API-initiated evictions respect them [1][2].\n- Grace period: Node-pressure eviction does not respect terminationGracePeriodSeconds; hard eviction thresholds use a 0s grace period (immediate shutdown), while soft thresholds respect evictionMaxPodGracePeriod [1]. API-initiated eviction respects terminationGracePeriodSeconds [2].\n- Pod phase: During node-pressure eviction, the kubelet sets the selected pods' phase to Failed and terminates them [1].",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "citations": [
+        {
+          "marker": 1,
+          "path": "content/en/docs/concepts/scheduling-eviction/node-pressure-eviction.md",
+          "headings": [],
+          "review": {
+            "verdict": "supports",
+            "reason": "states the resources watched, pods failed to reclaim them, no PDB or terminationGracePeriodSeconds, the soft and hard grace periods and phase Failed"
+          }
+        },
+        {
+          "marker": 2,
+          "path": "content/en/docs/concepts/scheduling-eviction/api-eviction.md",
+          "headings": [],
+          "review": {
+            "verdict": "supports",
+            "reason": "states the Eviction API and kubectl drain, the Eviction object, respect for PDBs and grace periods, and the policy-controlled DELETE"
+          }
+        }
+      ],
+      "timings_ms": {
+        "retrieve": 102,
+        "rerank": 1023,
+        "generate": 11322,
+        "total": 12450
+      }
+    },
+    {
+      "id": "k8s-121",
+      "query_log": "5d2f0593-7159-4714-b920-1d490ac1e22f",
+      "question": "How do I roll back a Deployment, and how many old revisions can I roll back to?",
+      "kind": "multi_section",
+      "outcome": "answered",
+      "answer": "Run `kubectl rollout undo deployment/nginx-deployment` to roll back to the previous revision, or `kubectl rollout undo deployment/nginx-deployment --to-revision=2` to target a specific revision [1]. You can inspect revisions with `kubectl rollout history deployment/nginx-deployment` and a specific revision with `--revision=2` [8], then verify with `kubectl get deployment` and `kubectl describe deployment` [1]. A rollback restores only the Deployment's Pod template (for example, the container image), not changes like scaling [2]. The number of old revisions available for rollback is governed by `.spec.revisionHistoryLimit`: by default 10 old ReplicaSets are kept [3][4], you can change that limit [3][4], and setting it to 0 removes all history so the Deployment cannot be rolled back [3][4].",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "citations": [
+        {
+          "marker": 1,
+          "path": "content/en/docs/concepts/workloads/controllers/deployment.md",
+          "headings": [
+            "Rolling Back a Deployment",
+            "Rolling Back to a Previous Revision"
+          ],
+          "review": {
+            "verdict": "supports",
+            "reason": "gives kubectl rollout undo, --to-revision=2, and the get and describe checks"
+          }
+        },
+        {
+          "marker": 8,
+          "path": "content/en/docs/concepts/workloads/controllers/deployment.md",
+          "headings": [
+            "Rolling Back a Deployment",
+            "Checking Rollout History of a Deployment"
+          ],
+          "review": {
+            "verdict": "supports",
+            "reason": "gives kubectl rollout history and --revision=2"
+          }
+        },
+        {
+          "marker": 2,
+          "path": "content/en/docs/concepts/workloads/controllers/deployment.md",
+          "headings": [
+            "Rolling Back a Deployment"
+          ],
+          "review": {
+            "verdict": "supports",
+            "reason": "states only the Pod template is rolled back, and scaling creates no revision"
+          }
+        },
+        {
+          "marker": 3,
+          "path": "content/en/docs/concepts/workloads/controllers/deployment.md",
+          "headings": [
+            "Clean up Policy"
+          ],
+          "review": {
+            "verdict": "supports",
+            "reason": "states .spec.revisionHistoryLimit, its default of 10 and that 0 prevents rollback"
+          }
+        },
+        {
+          "marker": 4,
+          "path": "content/en/docs/concepts/workloads/controllers/deployment.md",
+          "headings": [
+            "Writing a Deployment Spec",
+            "Revision History Limit"
+          ],
+          "review": {
+            "verdict": "supports",
+            "reason": "states the limit sets how many old ReplicaSets are kept for rollback, 10 by default, and that 0 removes the history"
+          }
+        }
+      ],
+      "timings_ms": {
+        "retrieve": 192,
+        "rerank": 770,
+        "generate": 9433,
+        "total": 10405
+      }
+    }
+  ],
+  "rule": "a citation supports its sentence when the passage states the claim, or its own share of it when the sentence cites several passages; partly when it states only some of what it is cited for; does not support when it states none of it"
+}

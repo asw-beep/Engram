@@ -288,3 +288,58 @@ def test_the_report_states_a_shared_calibration_rule_once():
     text = render({"dense": _result()}, QUESTIONS, False, calibration=calibration)
     assert text.count("the midpoint that maximises balanced accuracy on dev") == 1
     assert "`dense_rerank`: 0.5" in text and "`hybrid_rerank`: 0.5" in text
+
+
+def _answer(qid, answer, *verdicts, outcome="answered"):
+    return {
+        "id": qid,
+        "question": f"question {qid}",
+        "kind": "conceptual",
+        "outcome": outcome,
+        "answer": answer,
+        "citations": [
+            {
+                "marker": n,
+                "path": "a.md",
+                "headings": ["A"],
+                "review": {"verdict": v, "reason": "r"},
+            }
+            for n, v in enumerate(verdicts, 1)
+        ],
+    }
+
+
+def test_the_report_shows_the_answer_review_as_a_manual_sample():
+    review = {
+        "reviewer": "the project's author",
+        "rule": "a citation supports its sentence when the passage states it",
+        "sampled": ["k-1", "k-2", "k-9"],
+        "answers": [
+            _answer("k-1", "Pods share a network [1] and storage [2].", "supports", "partly"),
+            _answer("k-2", "As Passage 2 says, it restarts [1].", "does not support"),
+        ],
+    }
+    review["settings"] = {"retrieval_mode": "hybrid", "rerank_enabled": True, "llm_model": "cfg"}
+    for answer in review["answers"]:
+        answer["model"] = "fallback-model"
+    text = render({"dense": _result()}, QUESTIONS, False, answer_review=review)
+    assert "## Answer review (manual sample)" in text
+    # The models that answered, not the configured one, which may have fallen back.
+    assert "`fallback-model`" in text and "`cfg`" not in text
+    assert "| k-1 | answered | 2 | 1 | 1 | 0 | no |" in text
+    assert "| k-2 | answered | 1 | 0 | 0 | 1 | yes |" in text
+    assert "1 of 2 answers name a passage" in text
+    assert "2 of 3 sampled questions were asked" in text
+    assert "the project's author" in text
+    assert "a citation supports its sentence when the passage states it" in text
+
+
+def test_unreviewed_citations_are_reported_as_not_reviewed():
+    review = {"reviewer": "", "sampled": ["k-1"], "answers": [_answer("k-1", "x [1].", "")]}
+    text = render({"dense": _result()}, QUESTIONS, False, answer_review=review)
+    assert "| k-1 | answered | 1 | not reviewed |" in text
+
+
+def test_without_an_answer_review_the_report_says_none_was_made():
+    text = render({"dense": _result()}, QUESTIONS, reviewed=False)
+    assert "No answer review has been made" in text

@@ -98,12 +98,15 @@ Until then the results document is marked provisional. The review is recorded in
 
 ## Commands
 
-Run these from `backend/`, with PostgreSQL and Qdrant running and the corpus ingested:
+Run these from `backend/`, with PostgreSQL, Qdrant and OpenSearch running and the corpus
+ingested:
 
 | Task | Command |
 |---|---|
 | Check every gold label against the corpus | `uv run python -m eval.check` |
-| Run one configuration (`dense`, `hybrid` or `hybrid_rerank`) | `uv run python -m eval.run --config dense` |
+| Run one configuration (`dense`, `hybrid`, `dense_rerank` or `hybrid_rerank`) | `uv run python -m eval.run --config dense` |
+| Choose a reranked configuration's evidence cutoff on `dev` | `uv run python -m eval.calibrate --config hybrid_rerank` |
+| Ask the answer-review sample through the model (about 10 requests) | `uv run python -m eval.answers` |
 | Rebuild `docs/phase-2-evaluation.md` from the result files | `uv run python -m eval.report` |
 
 `eval.check` exits non-zero and names each question whose gold path has no current document,
@@ -115,5 +118,14 @@ question's ranked passages, scores and retrieval time, and a summary of the `tes
 asks one warm-up question first, so model loading isn't timed. A configuration that needs a
 feature this build lacks is refused rather than run as something else.
 
-Set `HF_HOME=E:/Projects/Engram/data/hf` on `eval.run`, as on the API, so the models load
-from inside the project.
+`eval.calibrate` reads `results/<config>.json` and records the cutoff, its rule and its
+accuracy on `dev` in `results/calibration.json`. Copy the printed cutoff into
+`rerank_min_score` and rerun `eval.run` so the `test` gate uses it.
+
+`eval.answers` asks every eighth answerable `test` question, at most 15, with the settings as
+configured, and writes `results/answer_review.json` with an empty `review` per citation. The
+reviewer fills each with a `verdict` (`supports`, `partly` or `does not support`) and a
+`reason`. It refuses to overwrite a file whose reviews have been started.
+
+Set `HF_HOME=E:/Projects/Engram/data/hf` on `eval.run` and `eval.answers`, as on the API, so
+the models load from inside the project.
