@@ -14,6 +14,7 @@ import pytest  # noqa: E402
 from alembic import command  # noqa: E402
 from alembic.config import Config  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
+from opensearchpy import OpenSearch  # noqa: E402
 from qdrant_client import QdrantClient, models  # noqa: E402
 from sqlalchemy import create_engine, delete, func, select, text, update  # noqa: E402
 from sqlalchemy.engine import make_url  # noqa: E402
@@ -26,6 +27,7 @@ from app.db.constants import (  # noqa: E402
     OPEN_JOB_STATUSES,
     JobStatus,
 )
+from app.db.keyword_index import KeywordIndex  # noqa: E402
 from app.db.models import (  # noqa: E402
     Chunk,
     Document,
@@ -360,6 +362,27 @@ def test_collection():
     yield vector_index
     client.delete_collection(vector_index.collection)
     client.close()
+
+
+@pytest.fixture(scope="session")
+def opensearch_client():
+    settings = Settings(_env_file=None)
+    client = OpenSearch(hosts=[settings.opensearch_url], timeout=30)
+    yield client
+    client.close()
+
+
+@pytest.fixture
+def keyword_index(opensearch_client):
+    """A new OpenSearch index for each test, deleted after it.
+
+    Emptying one shared index is not enough: deleted documents stay in its BM25 statistics,
+    so one test's chunks would change the ranking another test sees.
+    """
+    keyword_index = KeywordIndex(opensearch_client, f"chunks_test_{uuid4().hex}")
+    keyword_index.ensure_index()
+    yield keyword_index
+    opensearch_client.indices.delete(index=keyword_index.index, ignore_unavailable=True)
 
 
 @pytest.fixture

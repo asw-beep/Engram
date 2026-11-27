@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://engram:engram@127.0.0.1:15432/engram"
     qdrant_url: str = "http://127.0.0.1:6333"
     qdrant_collection: str = "chunks_bge_m3_v1"
+    opensearch_url: str = "http://127.0.0.1:9200"
+    # Versioned, so a mapping change builds a new index beside the old one.
+    opensearch_index: str = "chunks_v1"
     storage_dir: str = "../data/files"
 
     embedding_model_id: str = "BAAI/bge-m3"
