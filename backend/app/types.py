@@ -36,3 +36,14 @@ class Passage:
     page_start: int | None
     page_end: int | None
     revision: str | None
+
+
+@dataclass(frozen=True)
+class RetrievalOutcome:
+    """What retrieval found for one question, before the evidence cutoff."""
+
+    passages: list[Passage]  # ranked, after the Postgres recheck
+    mode: str  # "dense", "hybrid" or "dense_fallback"
+    reranked: bool
+    retrieve_ms: int
+    rerank_ms: int

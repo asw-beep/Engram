@@ -23,7 +23,7 @@ from app.generation.citations import Citation, build_citation, validate_citation
 from app.generation.context import select_passages
 from app.generation.prompts import build_messages
 from app.retrieval.base import Retriever
-from app.retrieval.recheck import load_passages
+from app.retrieval.pipeline import retrieve_passages
 from app.types import AccessScope, Passage
 
 logger = logging.getLogger(__name__)
@@ -78,8 +78,7 @@ def answer_question(
         return QuestionResult(entry.id, outcome, answer, citations or [], passages or [])
 
     try:
-        hits = retriever.search(question, scope, settings.retrieval_limit)
-        found = load_passages(session, hits, scope)
+        found = retrieve_passages(session, question, scope, retriever, settings).passages
     except Exception as error:
         logger.warning("Retrieval failed, so the question can't be answered", exc_info=True)
         _rollback(session)

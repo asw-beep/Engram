@@ -1,0 +1,93 @@
+import json
+
+import pytest
+
+from eval.dataset import Gold, Question
+from eval.report import render
+from eval.run import run_questions, summarise
+from tests.tenants import DEFAULT_SCOPE
+
+
+def _q(qid, kind, split, *gold):
+    return Question(qid, f"question {qid}", kind, tuple(gold), split)
+
+
+def _row(qid, top, *ranked, latency=10):
+    return {
+        "id": qid,
+        "ranked": [{"path": p, "headings": list(h), "score": top} for p, h in ranked],
+        "top_score": top,
+        "latency_ms": latency,
+    }
+
+
+QUESTIONS = [
+    _q("k-1", "conceptual", "test", Gold("a.md", ("A",))),
+    _q("k-2", "exact_term", "test", Gold("b.md", ("B",))),
+    _q("k-3", "unanswerable", "test"),
+    _q("k-4", "conceptual", "dev", Gold("a.md", ("A",))),
+]
+PER_QUESTION = [
+    _row("k-1", 0.9, ("a.md", ("A",)), latency=10),
+    _row("k-2", 0.3, ("x.md", ()), latency=30),
+    _row("k-3", 0.2, ("x.md", ()), latency=20),
+    _row("k-4", 0.95, ("a.md", ("A",)), latency=999),
+]
+
+
+def test_summary_counts_only_the_test_split():
+    summary = summarise(PER_QUESTION, QUESTIONS, cutoff=0.5)
+    assert (summary["answerable"], summary["unanswerable"]) == (2, 1)
+    assert summary["overall"]["recall@5"] == pytest.approx(0.5)
+    assert summary["overall"]["mrr@10"] == pytest.approx(0.5)
+    assert summary["latency_ms"] == {"median": 20, "p95": 30}
+
+
+def test_summary_breaks_metrics_down_by_kind():
+    by_kind = summarise(PER_QUESTION, QUESTIONS, cutoff=0.5)["by_kind"]
+    assert by_kind["conceptual"]["recall@5"] == 1.0 and by_kind["conceptual"]["count"] == 1
+    assert by_kind["exact_term"]["recall@5"] == 0.0
+    assert "unanswerable" not in by_kind
+
+
+def test_summary_reports_the_evidence_gate_at_the_cutoff():
+    gate = summarise(PER_QUESTION, QUESTIONS, cutoff=0.5)["evidence_gate"]
+    assert gate == {
+        "cutoff": 0.5,
+        "answerable_passed": 0.5,
+        "unanswerable_refused": 1.0,
+        "balanced_accuracy": 0.75,
+    }
+
+
+def test_a_question_with_no_passages_is_refused_by_the_gate():
+    per_question = [_row("k-1", None), _row("k-3", None)]
+    gate = summarise(per_question, QUESTIONS[:1] + QUESTIONS[2:3], cutoff=0.5)["evidence_gate"]
+    assert (gate["answerable_passed"], gate["unanswerable_refused"]) == (0.0, 1.0)
+
+
+def test_run_records_each_question_ranking(session, settings, seed_chunk, retriever):
+    seed_chunk("question k-1 about pods", path="pods.md")
+    rows = run_questions(
+        session,
+        [_q("k-1", "conceptual", "test", Gold("pods.md", ()))],
+        DEFAULT_SCOPE,
+        retriever,
+        settings,
+    )
+    assert [r["id"] for r in rows] == ["k-1"]
+    assert rows[0]["ranked"][0]["path"] == "pods.md" and rows[0]["top_score"] > 0
+    assert rows[0]["latency_ms"] >= 0
+
+
+def test_report_lists_missing_configurations_as_not_run(tmp_path):
+    result = {
+        "config": "dense",
+        "corpus": {"documents": 3, "chunks": 9},
+        "summary": summarise(PER_QUESTION, QUESTIONS, cutoff=0.5),
+    }
+    text = render({"dense": result}, QUESTIONS, reviewed=False)
+    assert "| dense | 0.500 |" in text
+    assert "| hybrid | not run |" in text and "| hybrid_rerank | not run |" in text
+    assert "Provisional" in text
+    json.dumps(result)  # result files must stay plain JSON
