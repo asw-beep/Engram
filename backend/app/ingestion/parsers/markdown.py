@@ -38,10 +38,12 @@ _HEADING_LABELS = {
     "options": "Options",
 }
 _FENCE = re.compile(r"^\s*(`{3,}|~{3,})")
-# {{< tab codelang="yaml" >}} shows its content as code, with no fence in the source, so
-# a "# comment" inside it would otherwise read as a heading. Its tags become this fence.
+# {{< tab codelang="yaml" >}}, {{< highlight yaml >}} and {{< mermaid >}} show their
+# content as code, with no fence in the source, so a "# comment" or a line over "---"
+# inside one would otherwise read as a heading. Their tags become this fence.
 _CODELANG_ATTRIBUTE = re.compile(r"""\bcodelang=(?:"([^"]*)"|'([^']*)')""")
-_CODE_TAB_FENCE = "~~~~~"
+_HIGHLIGHT_LANGUAGE = re.compile(r"""^\s*highlight\s+["']?([\w+#.-]+)""")
+_CODE_FENCE = "~~~~~"
 
 
 @dataclass(frozen=True)
@@ -88,21 +90,27 @@ def _strip_shortcodes(lines: list[str]) -> list[str]:
     result: list[str] = []
     prose: list[str] = []
     fence = ""
-    in_code_tab = False
+    code_closer = ""  # the closing tag of the code shortcode we're inside, such as "/tab"
 
     def replace(match: re.Match[str]) -> str:
-        nonlocal in_code_tab
+        nonlocal code_closer
         body = match.group(1) if match.group(1) is not None else match.group(2)
         padding = "\n" * body.count("\n")
-        name = _SHORTCODE_NAME.match(body)
-        language = _quoted(_CODELANG_ATTRIBUTE.search(body))
-        if not in_code_tab and name and name.group(1) == "tab" and language is not None:
-            in_code_tab = True
-            return f"{_CODE_TAB_FENCE} {language}".rstrip() + padding
-        if in_code_tab and body.strip() == "/tab":
-            in_code_tab = False
-            return _CODE_TAB_FENCE + padding
-        return _shortcode_text(match)
+        if code_closer:
+            if "".join(body.split()) == code_closer:  # "/ mermaid" closes too
+                code_closer = ""
+                return _CODE_FENCE + padding
+            return _shortcode_text(match)
+        opened = _code_shortcode(body)
+        if opened is None:
+            return _shortcode_text(match)
+        name, language = opened
+        closing = re.compile(r"\{\{[<%]\s*/\s*" + re.escape(name) + r"\s*[>%]\}\}")
+        if not closing.search(match.string, match.end()):
+            # Unclosed: a fence would hide every later heading, so drop the tag instead.
+            return _shortcode_text(match)
+        code_closer = f"/{name}"
+        return f"{_CODE_FENCE} {language}".rstrip() + padding
 
     def flush() -> None:
         if prose:
@@ -124,6 +132,22 @@ def _strip_shortcodes(lines: list[str]) -> list[str]:
             prose.append(line)
     flush()
     return result
+
+
+def _code_shortcode(body: str) -> tuple[str, str] | None:
+    """The name and language of a shortcode tag that opens a block of code, else None."""
+    name = _SHORTCODE_NAME.match(body)
+    if name is None:
+        return None
+    if name.group(1) == "tab":
+        language = _quoted(_CODELANG_ATTRIBUTE.search(body))
+        return None if language is None else ("tab", language)
+    if name.group(1) == "highlight":
+        language = _HIGHLIGHT_LANGUAGE.match(body)
+        return ("highlight", language.group(1) if language else "")
+    if name.group(1) == "mermaid":
+        return ("mermaid", "mermaid")
+    return None
 
 
 def _shortcode_text(match: re.Match[str]) -> str:

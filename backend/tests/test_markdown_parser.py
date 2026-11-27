@@ -192,3 +192,24 @@ def test_a_code_tab_is_code_so_its_comments_are_not_headings():
 def test_a_tab_without_codelang_stays_prose():
     doc = parse_file("a.md", b'## A\na\n{{< tab name="Shell" >}}\n## B\nx\n{{< /tab >}}\n')
     assert [s.heading_path for s in doc.sections] == [("A",), ("B",)]
+
+
+@pytest.mark.parametrize(
+    ("opening", "closing"),
+    [
+        ('{{< highlight yaml "hl_lines=7-10" >}}', "{{< /highlight >}}"),
+        ("{{< mermaid >}}", "{{< /mermaid >}}"),
+        ("{{< mermaid >}}", "{{</ mermaid >}}"),
+    ],
+    ids=["highlight", "mermaid", "spaced-closing-tag"],
+)
+def test_a_code_shortcode_is_code_so_setext_lines_are_not_headings(opening, closing):
+    source = f"## A\nx\n{opening}\nkind: Pod\n---\n# comment\n{closing}\n## B\ny\n".encode()
+    doc = parse_file("a.md", source)
+    assert [s.heading_path for s in doc.sections] == [("A",), ("B",)]
+    assert doc.sections[1].start_line == 8
+
+
+def test_an_unclosed_code_shortcode_does_not_hide_later_headings():
+    doc = parse_file("a.md", b"## A\nx\n{{< highlight yaml >}}\nkind: Pod\n## B\ny\n")
+    assert [s.heading_path for s in doc.sections] == [("A",), ("B",)]
