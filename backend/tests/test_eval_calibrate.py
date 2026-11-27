@@ -54,10 +54,13 @@ def test_a_question_without_passages_is_always_refused():
     assert 0.2 < found["cutoff"] <= 0.7
 
 
-def test_equally_good_cutoffs_go_to_the_higher_one():
-    # Cutting at 0.25 or at 0.75 each gets one question of each kind wrong.
-    questions, tops = _dataset([0.8, 0.2], [0.3, 0.7])
-    assert best_cutoff(_rows(tops), questions)["cutoff"] == pytest.approx(0.75)
+def test_equally_good_cutoffs_go_to_the_lower_one():
+    # 0.3 passes both answerable and one unanswerable question; 0.75 refuses one answerable
+    # and both unanswerable. Each scores 0.75 and 0.55 scores 0.5, so the tie decides.
+    questions, tops = _dataset([0.9, 0.5], [0.6, 0.1])
+    found = best_cutoff(_rows(tops), questions)
+    assert found["cutoff"] == pytest.approx(0.3)
+    assert "lower" in found["rule"]
 
 
 def test_the_cutoff_is_rounded_but_stays_between_its_neighbours():

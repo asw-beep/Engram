@@ -115,6 +115,20 @@ def best_cutoff(answerable_top: list[float], unanswerable_top: list[float]) -> f
     )
 
 
+def exact_mcnemar(only_first: int, only_second: int) -> float:
+    """Two-sided exact McNemar p-value for two configurations judged on the same questions.
+
+    Only the questions where they disagree count: the chance, were neither better, of those
+    splitting at least this unevenly.
+    """
+    disagreements = only_first + only_second
+    if disagreements == 0:
+        return 1.0
+    smaller = min(only_first, only_second)
+    tail = sum(math.comb(disagreements, i) for i in range(smaller + 1)) / 2**disagreements
+    return min(1.0, 2 * tail)
+
+
 def _dcg(gains: list[int]) -> float:
     return sum(gain / math.log2(rank + 1) for rank, gain in enumerate(gains, start=1))
 

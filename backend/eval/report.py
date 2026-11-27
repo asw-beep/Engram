@@ -12,6 +12,7 @@ from collections import Counter
 from pathlib import Path
 
 from eval.dataset import KINDS, Question, load_questions
+from eval.metrics import Ranked, exact_mcnemar, recall_at
 
 CONFIGS = ("dense", "hybrid", "dense_rerank", "hybrid_rerank")
 DESCRIPTIONS = {
@@ -20,6 +21,14 @@ DESCRIPTIONS = {
     "dense_rerank": "dense, then BGE-reranker-v2-m3",
     "hybrid_rerank": "hybrid, then BGE-reranker-v2-m3",
 }
+# Each pair isolates one change: OpenSearch alone, the reranker alone, both, and OpenSearch
+# once the reranker is there.
+PAIRS = (
+    ("hybrid", "dense"),
+    ("dense_rerank", "dense"),
+    ("hybrid_rerank", "dense"),
+    ("hybrid_rerank", "dense_rerank"),
+)
 RECALL_TARGET = 0.85
 LATENCY_TARGET_MS = 5000
 
@@ -32,7 +41,7 @@ def render(
 ) -> str:
     parts = [_heading(reviewed), _dataset(results, questions), _quality(results)]
     parts += [_by_kind(results, questions), _gate(results, calibration or {})]
-    parts += [_latency(results)]
+    parts += [_paired(results, questions), _latency(results)]
     parts += [_targets(results, reviewed), _limits(questions, reviewed)]
     return "\n\n".join(parts) + "\n"
 
@@ -165,16 +174,27 @@ def _gate(results: dict[str, dict], calibration: dict[str, dict]) -> str:
         "`dense_min_score` for dense similarities and `rerank_min_score` for reranker scores. "
         "A calibrated one was chosen on the `dev` split only. Unreranked `hybrid` has no gate: "
         "its scores are RRF values, which rank passages but aren't comparable to a cutoff."
-        + "".join(_calibrated(results, config, entry) for config, entry in calibration.items())
+        + _calibrations(results, calibration)
     )
 
 
-def _calibrated(results: dict[str, dict], config: str, entry: dict) -> str:
+def _calibrations(results: dict[str, dict], calibration: dict[str, dict]) -> str:
+    if not calibration:
+        return ""
+    rules = {entry["rule"] for entry in calibration.values()}
+    shared = len(rules) == 1
+    intro = f"\n\nEach calibrated cutoff is {rules.pop()}.\n\n" if shared else "\n\n"
+    lines = [_calibrated(results, config, entry, shared) for config, entry in calibration.items()]
+    return intro + "\n".join(lines)
+
+
+def _calibrated(results: dict[str, dict], config: str, entry: dict, shared: bool) -> str:
     dev = entry["dev"]
+    rule = "" if shared else f", chosen as {entry['rule']},"
     text = (
-        f"\n\nThe calibrated cutoff for `{config}`, {entry['cutoff']}, is {entry['rule']}. "
-        f"Its balanced accuracy is {dev['balanced_accuracy']:.3f} on `dev` "
-        f"({dev['answerable']} answerable and {dev['unanswerable']} unanswerable questions)"
+        f"- `{config}`: {entry['cutoff']}{rule} with balanced accuracy "
+        f"{dev['balanced_accuracy']:.3f} on `dev` ({dev['answerable']} answerable and "
+        f"{dev['unanswerable']} unanswerable questions)"
     )
     gate = _summary(results, config).get("evidence_gate")
     if config not in results:
@@ -182,6 +202,70 @@ def _calibrated(results: dict[str, dict], config: str, entry: dict) -> str:
     if not gate or gate.get("cutoff") != entry["cutoff"]:
         return text + f"; the `{config}` run on `test` used another cutoff, so rerun it."
     return text + f" and {gate['balanced_accuracy']:.3f} on `test`."
+
+
+def _paired(results: dict[str, dict], questions: list[Question]) -> str:
+    tested = [q for q in questions if q.split == "test"]
+    answerable = [q for q in tested if q.kind != "unanswerable"]
+    rows = []
+    for first, second in PAIRS:
+        label = f"| `{first}` vs `{second}` |"
+        if first not in results or second not in results:
+            rows.append(f"{label} not run | – | – | – | – | – |")
+            continue
+        a, b = _rows_by_id(results[first]), _rows_by_id(results[second])
+        if any(q.id not in a or q.id not in b for q in tested):
+            rows.append(f"{label} different questions; rerun both | – | – | – | – | – |")
+            continue
+        cells = _disagreements([(_found(q, a[q.id]), _found(q, b[q.id])) for q in answerable])
+        cutoffs = [_gate_cutoff(results, first), _gate_cutoff(results, second)]
+        if None in cutoffs:
+            cells += ["–", "–", "–"]
+        else:
+            right = [
+                (_gate_right(q, a[q.id], cutoffs[0]), _gate_right(q, b[q.id], cutoffs[1]))
+                for q in tested
+            ]
+            cells += _disagreements(right)
+        rows.append(f"{label} " + " | ".join(cells) + " |")
+    return (
+        "## Paired comparison (test split)\n\n"
+        "| Comparison | Recall@5: only first | Only second | p | Gate right: only first | "
+        "Only second | p |\n|---|---:|---:|---:|---:|---:|---:|\n" + "\n".join(rows) + "\n\n"
+        f"Each row compares two configurations on the same {len(answerable)} answerable and "
+        f"{len(tested) - len(answerable)} unanswerable `test` questions. The Recall@5 columns "
+        "count the answerable questions one configuration finds completely in its top 5 and "
+        "the other doesn't. The gate columns count the questions one gate gets right (an "
+        "answerable question passes, an unanswerable one is refused) and the other gets "
+        "wrong, each at its own cutoff. p is the two-sided exact McNemar test on those "
+        "disagreements: the chance of a split at least this uneven if neither configuration "
+        "were better. A p above 0.05 means this sample doesn't show a difference, not that "
+        "there is none."
+    )
+
+
+def _rows_by_id(result: dict) -> dict[str, dict]:
+    return {row["id"]: row for row in result.get("per_question", [])}
+
+
+def _found(question: Question, row: dict) -> bool:
+    ranked = [Ranked(item["path"], tuple(item["headings"])) for item in row["ranked"]]
+    return recall_at(5, ranked, question.gold) == 1.0
+
+
+def _gate_cutoff(results: dict[str, dict], config: str) -> float | None:
+    return (_summary(results, config).get("evidence_gate") or {}).get("cutoff")
+
+
+def _gate_right(question: Question, row: dict, cutoff: float) -> bool:
+    passes = row["top_score"] is not None and row["top_score"] >= cutoff
+    return passes if question.kind != "unanswerable" else not passes
+
+
+def _disagreements(pairs: list[tuple[bool, bool]]) -> list[str]:
+    only_first = sum(a and not b for a, b in pairs)
+    only_second = sum(b and not a for a, b in pairs)
+    return [str(only_first), str(only_second), f"{exact_mcnemar(only_first, only_second):.3f}"]
 
 
 def _latency(results: dict[str, dict]) -> str:

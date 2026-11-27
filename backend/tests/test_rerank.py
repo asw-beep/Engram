@@ -53,6 +53,16 @@ def test_the_reranker_reads_the_question_and_each_passage_with_its_headings(
     assert reranker.calls == [("how pods restart", [expected])]
 
 
+def test_the_reranker_reads_only_passages_the_asker_may_see(session, settings, seed_chunk):
+    visible = seed_chunk("how pods work", path="a.md")
+    hidden = seed_chunk("how pods work in secret", path="b.md", principals=("group:secret",))
+    hits = [RetrievalHit(hidden.id, 0.9), RetrievalHit(visible.id, 0.8)]
+    reranker = FakeReranker()
+    outcome = _retrieve(session, settings, hits, reranker)
+    assert [p.document_path for p in outcome.passages] == ["a.md"]
+    assert reranker.calls == [("how pods work", ["how pods work"])]
+
+
 def test_equal_reranker_scores_keep_the_retrieval_order(session, settings, seed_chunk):
     first = seed_chunk("pods one", path="a.md")
     second = seed_chunk("pods two", path="b.md")

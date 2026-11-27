@@ -13,12 +13,14 @@ import sys
 from pathlib import Path
 
 from eval.dataset import Question, load_questions
+from eval.metrics import best_cutoff as midpoint_cutoff
 from eval.run import CONFIGS, evidence_gate
 
 RULE = (
     "the threshold, midway between two adjacent `dev` top scores, that maximises balanced "
     "accuracy between answerable and unanswerable `dev` questions, each judged by its highest "
-    "passage score; a tie goes to the higher threshold"
+    "passage score, a question without passages always refused; a tie goes to the lower "
+    "threshold"
 )
 
 
@@ -32,18 +34,15 @@ def best_cutoff(per_question: list[dict], questions: list[Question]) -> dict:
             "calibration needs answerable and unanswerable dev questions "
             f"({len(answerable)} answerable, {len(unanswerable)} unanswerable)"
         )
-    scores = sorted({row["top_score"] for _, row in dev if row["top_score"] is not None})
-    if len(scores) < 2:
-        raise ValueError("calibration needs at least two different dev top scores")
-
-    best: tuple[float, float, float] | None = None  # balanced accuracy, low, high
-    for low, high in zip(scores, scores[1:], strict=False):
-        accuracy = evidence_gate(answerable, unanswerable, high)["balanced_accuracy"]
-        # >= so that a later, higher threshold wins a tie.
-        if best is None or accuracy >= best[0]:
-            best = (accuracy, low, high)
-    _, low, high = best
-    cutoff = _between(low, high)
+    # A question without passages is never answered, so it scores below every cutoff.
+    answerable_top = [_top(row) for _, row in answerable]
+    unanswerable_top = [_top(row) for _, row in unanswerable]
+    middle = midpoint_cutoff(answerable_top, unanswerable_top)
+    scores = answerable_top + unanswerable_top
+    below = [score for score in scores if score < middle]
+    if not below:
+        raise ValueError("no cutoff on dev does better than answering every question")
+    cutoff = _between(max(below), min(score for score in scores if score > middle))
     return {
         "cutoff": cutoff,
         "rule": RULE,
@@ -57,6 +56,10 @@ def best_cutoff(per_question: list[dict], questions: list[Question]) -> dict:
             },
         },
     }
+
+
+def _top(row: dict) -> float:
+    return row["top_score"] if row["top_score"] is not None else float("-inf")
 
 
 def _between(low: float, high: float) -> float:

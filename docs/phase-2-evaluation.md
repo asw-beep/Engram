@@ -52,9 +52,21 @@ A chunk is relevant when it comes from a gold document and its heading path star
 
 A question passes when its highest passage score is at or above the cutoff, the rule `answer_question` applies. This is the score gate only: the API also refuses when every passage above the cutoff is too large for the context budget, which the harness doesn't model. Balanced accuracy is the mean of the two shares. A `configured` cutoff is taken from the settings as given, not tuned on this dataset: `dense_min_score` for dense similarities and `rerank_min_score` for reranker scores. A calibrated one was chosen on the `dev` split only. Unreranked `hybrid` has no gate: its scores are RRF values, which rank passages but aren't comparable to a cutoff.
 
-The calibrated cutoff for `hybrid_rerank`, 0.74, is the threshold, midway between two adjacent `dev` top scores, that maximises balanced accuracy between answerable and unanswerable `dev` questions, each judged by its highest passage score; a tie goes to the higher threshold. Its balanced accuracy is 1.000 on `dev` (49 answerable and 8 unanswerable questions) and 0.993 on `test`.
+Each calibrated cutoff is the threshold, midway between two adjacent `dev` top scores, that maximises balanced accuracy between answerable and unanswerable `dev` questions, each judged by its highest passage score, a question without passages always refused; a tie goes to the lower threshold.
 
-The calibrated cutoff for `dense_rerank`, 0.74, is the threshold, midway between two adjacent `dev` top scores, that maximises balanced accuracy between answerable and unanswerable `dev` questions, each judged by its highest passage score; a tie goes to the higher threshold. Its balanced accuracy is 1.000 on `dev` (49 answerable and 8 unanswerable questions) and 0.993 on `test`.
+- `hybrid_rerank`: 0.74 with balanced accuracy 1.000 on `dev` (49 answerable and 8 unanswerable questions) and 0.993 on `test`.
+- `dense_rerank`: 0.74 with balanced accuracy 1.000 on `dev` (49 answerable and 8 unanswerable questions) and 0.993 on `test`.
+
+## Paired comparison (test split)
+
+| Comparison | Recall@5: only first | Only second | p | Gate right: only first | Only second | p |
+|---|---:|---:|---:|---:|---:|---:|
+| `hybrid` vs `dense` | 1 | 5 | 0.219 | – | – | – |
+| `dense_rerank` vs `dense` | 1 | 4 | 0.375 | 6 | 1 | 0.125 |
+| `hybrid_rerank` vs `dense` | 3 | 3 | 1.000 | 6 | 1 | 0.125 |
+| `hybrid_rerank` vs `dense_rerank` | 3 | 0 | 0.250 | 0 | 0 | 1.000 |
+
+Each row compares two configurations on the same 73 answerable and 12 unanswerable `test` questions. The Recall@5 columns count the answerable questions one configuration finds completely in its top 5 and the other doesn't. The gate columns count the questions one gate gets right (an answerable question passes, an unanswerable one is refused) and the other gets wrong, each at its own cutoff. p is the two-sided exact McNemar test on those disagreements: the chance of a split at least this uneven if neither configuration were better. A p above 0.05 means this sample doesn't show a difference, not that there is none.
 
 ## Retrieval latency (test split)
 

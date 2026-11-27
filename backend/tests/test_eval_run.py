@@ -240,3 +240,51 @@ def test_the_report_names_both_cutoff_settings():
     text = render({"dense": _result()}, QUESTIONS, reviewed=False)
     assert "`dense_min_score`" in text and "`rerank_min_score`" in text
     assert "evidence_min_score" not in text
+
+
+def _paired_result(config, rows, cutoff):
+    return {
+        "config": config,
+        "cutoff_from": "configured",
+        "per_question": rows,
+        "summary": summarise(rows, QUESTIONS, cutoff=cutoff),
+    }
+
+
+def test_the_report_compares_configurations_question_by_question():
+    # dense finds k-1, hybrid_rerank finds k-2. At 0.5, dense's gate is right on k-1 and
+    # k-3; hybrid_rerank's is right on k-2 only.
+    reranked_rows = [
+        _row("k-1", 0.3, ("x.md", ())),
+        _row("k-2", 0.9, ("b.md", ("B",))),
+        _row("k-3", 0.9, ("x.md", ())),
+        _row("k-4", 0.9, ("a.md", ("A",))),
+    ]
+    results = {
+        "dense": _paired_result("dense", PER_QUESTION, 0.5),
+        "hybrid": _paired_result("hybrid", PER_QUESTION, None),
+        "hybrid_rerank": _paired_result("hybrid_rerank", reranked_rows, 0.5),
+    }
+    text = render(results, QUESTIONS, reviewed=False)
+    assert "| `hybrid_rerank` vs `dense` | 1 | 1 | 1.000 | 1 | 2 | 1.000 |" in text
+    assert "| `hybrid` vs `dense` | 0 | 0 | 1.000 | – | – | – |" in text
+    assert "| `dense_rerank` vs `dense` | not run |" in text
+    assert "McNemar" in text
+
+
+def test_the_report_states_a_shared_calibration_rule_once():
+    entry = {
+        "cutoff": 0.5,
+        "rule": "the midpoint that maximises balanced accuracy on dev",
+        "dev": {
+            "answerable": 49,
+            "unanswerable": 8,
+            "answerable_passed": 1.0,
+            "unanswerable_refused": 1.0,
+            "balanced_accuracy": 1.0,
+        },
+    }
+    calibration = {"dense_rerank": entry, "hybrid_rerank": entry}
+    text = render({"dense": _result()}, QUESTIONS, False, calibration=calibration)
+    assert text.count("the midpoint that maximises balanced accuracy on dev") == 1
+    assert "`dense_rerank`: 0.5" in text and "`hybrid_rerank`: 0.5" in text

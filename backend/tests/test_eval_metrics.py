@@ -7,6 +7,7 @@ from eval.metrics import (
     Ranked,
     balanced_accuracy,
     best_cutoff,
+    exact_mcnemar,
     in_section,
     ndcg_at,
     percentile,
@@ -128,3 +129,18 @@ def test_ndcg_still_expects_the_rest_of_a_document_that_has_more():
 def test_percentile_rejects_a_share_outside_zero_to_hundred():
     with pytest.raises(ValueError):
         percentile([1, 2], 101)
+
+
+def test_mcnemar_with_no_disagreements_shows_no_difference():
+    assert exact_mcnemar(0, 0) == 1.0
+
+
+def test_mcnemar_is_the_two_sided_binomial_tail():
+    # 6 against 1 of 7: 2 * (C(7,0) + C(7,1)) / 2**7.
+    assert exact_mcnemar(6, 1) == pytest.approx(0.125)
+    assert exact_mcnemar(1, 6) == pytest.approx(0.125)
+    assert exact_mcnemar(10, 0) == pytest.approx(2 / 1024)
+
+
+def test_mcnemar_never_exceeds_one():
+    assert exact_mcnemar(3, 3) == 1.0
