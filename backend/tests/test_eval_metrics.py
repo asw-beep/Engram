@@ -114,3 +114,17 @@ def test_percentile_nearest_rank():
 def test_percentile_of_nothing_is_an_error():
     with pytest.raises(ValueError):
         percentile([], 50)
+
+
+def test_ndcg_is_one_when_the_gold_document_has_nothing_outside_its_section():
+    # The harness says which gold documents have chunks outside their gold sections.
+    assert ndcg_at(10, [r("a.md", "A", "B")], G, outside=frozenset()) == pytest.approx(1.0)
+
+
+def test_ndcg_still_expects_the_rest_of_a_document_that_has_more():
+    assert ndcg_at(10, [r("a.md", "A", "B")], G, outside=frozenset({"a.md"})) < 1.0
+
+
+def test_percentile_rejects_a_share_outside_zero_to_hundred():
+    with pytest.raises(ValueError):
+        percentile([1, 2], 101)

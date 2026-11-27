@@ -10,6 +10,7 @@ from pathlib import Path
 
 KINDS = ("conceptual", "exact_term", "multi_section", "unanswerable")
 SPLITS = ("dev", "test")
+FIELDS = {"id", "question", "kind", "gold", "split"}
 
 
 @dataclass(frozen=True)
@@ -31,7 +32,9 @@ def load_questions(path: Path) -> list[Question]:
     """Every question in the file, in order. A defect raises ValueError naming its line."""
     questions: list[Question] = []
     seen: set[str] = set()
-    for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+    # split("\n"), not splitlines(): JSON strings may hold U+2028 and friends.
+    for number, line in enumerate(path.read_text(encoding="utf-8").split("\n"), start=1):
+        line = line.removesuffix("\r")
         if not line.strip():
             continue
         try:
@@ -52,6 +55,9 @@ def load_questions(path: Path) -> list[Question]:
 def _question(record: object) -> Question:
     if not isinstance(record, dict):
         raise ValueError("expected a JSON object")
+    unknown = sorted(set(record) - FIELDS)
+    if unknown:
+        raise ValueError(f"unknown field {', '.join(unknown)}")
     qid = _text(record, "id")
     text = _text(record, "question")
     kind = record.get("kind")
@@ -70,7 +76,21 @@ def _question(record: object) -> Question:
         raise ValueError("an answerable question needs gold")
     if kind == "multi_section" and len(gold) < 2:
         raise ValueError("a multi_section question needs at least two gold entries")
+    _reject_overlap(gold)
     return Question(qid, text, kind, gold, split)
+
+
+def _reject_overlap(gold: tuple[Gold, ...]) -> None:
+    """Refuse gold entries where one section contains another, or a repeated entry.
+
+    With no overlap, a chunk falls in at most one gold section, so every metric credits
+    it the same way whatever order the entries are listed in.
+    """
+    for i, first in enumerate(gold):
+        for second in gold[i + 1 :]:
+            shorter = min(len(first.headings), len(second.headings))
+            if first.path == second.path and first.headings[:shorter] == second.headings[:shorter]:
+                raise ValueError(f"gold entries overlap in {first.path}")
 
 
 def _text(record: dict, field: str) -> str:
@@ -87,6 +107,10 @@ def _gold(entry: object) -> Gold:
     headings = entry.get("headings")
     if not isinstance(path, str) or not path:
         raise ValueError("gold path must be a non-empty string")
-    if not isinstance(headings, list) or not all(isinstance(h, str) for h in headings):
-        raise ValueError("gold headings must be a list of strings")
+    if path.startswith("/"):
+        raise ValueError("gold path must be relative, as documents store it")
+    if not isinstance(headings, list) or not all(
+        isinstance(h, str) and h.strip() for h in headings
+    ):
+        raise ValueError("gold headings must be a list of non-empty strings")
     return Gold(path, tuple(headings))

@@ -5,6 +5,7 @@ heading path starts with the gold entry's headings, so a chunk in a subsection c
 """
 
 import math
+from collections.abc import Collection
 from dataclasses import dataclass
 
 from eval.dataset import Gold
@@ -36,13 +37,18 @@ def reciprocal_rank(ranked: list[Ranked], gold: tuple[Gold, ...], k: int = 10) -
     return 0.0
 
 
-def ndcg_at(k: int, ranked: list[Ranked], gold: tuple[Gold, ...]) -> float:
+def ndcg_at(
+    k: int, ranked: list[Ranked], gold: tuple[Gold, ...], outside: Collection[str] | None = None
+) -> float:
     """NDCG where each gold section and each gold document earns credit once.
 
     The first chunk from each gold section earns 2. The first chunk from each gold
     document outside its gold sections earns 1. Every other chunk earns 0. The ideal
     ranking is one 2 per gold section, then one 1 per gold document that has text
-    outside its gold sections (a gold entry with no headings covers the whole document).
+    outside its gold sections. `outside` names those documents, as the corpus says;
+    without it, every document whose gold entries all have headings is assumed to (an
+    entry with no headings covers the whole document). So a ranking holding only the
+    gold sections scores below 1 when the rest of a gold document could have been found.
     """
     _require_gold(gold)
     credited_sections: set[int] = set()
@@ -60,7 +66,11 @@ def ndcg_at(k: int, ranked: list[Ranked], gold: tuple[Gold, ...]) -> float:
             gains.append(1)
         else:
             gains.append(0)
-    partial_documents = [p for p in sorted(paths) if all(e.headings for e in gold if e.path == p)]
+    partial_documents = [
+        p
+        for p in sorted(paths)
+        if all(e.headings for e in gold if e.path == p) and (outside is None or p in outside)
+    ]
     ideal = ([2] * len(gold) + [1] * len(partial_documents))[:k]
     return _dcg(gains) / _dcg(ideal)
 
@@ -69,6 +79,8 @@ def percentile(values: list[float], p: float) -> float:
     """Nearest-rank percentile: the smallest value with at least p% of values at or below."""
     if not values:
         raise ValueError("percentile of no values")
+    if not 0 <= p <= 100:
+        raise ValueError(f"percentile {p} is outside 0 to 100")
     ordered = sorted(values)
     rank = max(1, math.ceil(p / 100 * len(ordered)))
     return ordered[min(rank, len(ordered)) - 1]
