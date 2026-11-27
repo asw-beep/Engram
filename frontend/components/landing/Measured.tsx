@@ -13,7 +13,9 @@ type Data = {
 export default function Measured({ data }: { data: Data }) {
   return (
     <section id="measured" className="l-section measured">
-      <p className="label section-label">04 — Measured</p>
+      <p className="label section-label">
+        04 — Measured <span className="status-tag">provisional</span>
+      </p>
       <h2 className="section-title">Measured, not assumed.</h2>
       <p className="section-lede">
         Every configuration answers the same {data.questions} test questions over{" "}

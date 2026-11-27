@@ -45,7 +45,9 @@ test("the measured section shows each configuration, the question count and its 
   expect(within(table).getAllByRole("row")).toHaveLength(MEASURED.rows.length + 1);
   expect(MEASURED.rows).toHaveLength(4);
   expect(screen.getByText(new RegExp(`${MEASURED.questions} test questions`))).toBeInTheDocument();
-  expect(screen.getByText(/provisional/i)).toBeInTheDocument();
+  // Shown beside the section label, not only in the note under the table.
+  expect(within(screen.getByText(/04 — Measured/)).getByText("provisional")).toBeInTheDocument();
+  expect(screen.getByText(/^Provisional\./)).toBeInTheDocument();
   const served = within(table).getByText("served").closest("tr");
   expect(served).toHaveTextContent("Hybrid + rerank");
   expect(screen.getByRole("link", { name: /full results/i })).toHaveAttribute(

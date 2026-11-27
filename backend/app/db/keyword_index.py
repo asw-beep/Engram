@@ -113,6 +113,10 @@ class KeywordIndex:
         """Index each chunk under its ID, so a repeat overwrites rather than duplicates."""
         if not items:
             return
+        # Without this, a bulk request to a missing index (say OpenSearch was down when the API
+        # started) lets OpenSearch create it with a dynamic mapping, which ensure_index would
+        # then leave alone: principals analysed as text and no identifier analyzer.
+        self.ensure_index()
         actions = [
             {
                 "_op_type": "index",

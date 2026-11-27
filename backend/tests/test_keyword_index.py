@@ -4,7 +4,7 @@ import pytest
 from opensearchpy.exceptions import ConnectionError as OpenSearchConnectionError
 from opensearchpy.exceptions import ConnectionTimeout, RequestError, TransportError
 
-from app.db.keyword_index import IndexedText, is_transient_opensearch_error
+from app.db.keyword_index import IndexedText, KeywordIndex, is_transient_opensearch_error
 from app.types import AccessScope
 from tests.tenants import TENANT_A, TENANT_B
 
@@ -137,3 +137,23 @@ def test_ping_reports_a_live_server(keyword_index):
 )
 def test_transient_errors_are_connection_failures_429_and_5xx(error, transient):
     assert is_transient_opensearch_error(error) is transient
+
+
+def test_an_upsert_into_a_missing_index_creates_it_with_the_real_mapping(opensearch_client):
+    # If OpenSearch was down when the API started, the first publish meets no index. Left to
+    # OpenSearch's auto-create, the index would get a dynamic mapping: principals analysed as
+    # text and no identifier analyzer, which ensure_index would then never repair.
+    index = KeywordIndex(opensearch_client, f"chunks_test_{uuid4().hex}")
+    try:
+        sre = _text("kube-scheduler picks a node", principals=("group:sre",))
+        index.upsert([sre])
+        mapping = opensearch_client.indices.get_mapping(index=index.index)[index.index]
+        fields = mapping["mappings"]["properties"]
+        assert fields["allowed_principals"]["type"] == "keyword"
+        assert fields["tenant_id"]["type"] == "keyword"
+        assert _ids(index.search("kube-scheduler", AccessScope(TENANT_A, ("group:sre",)), 10)) == [
+            sre.chunk_id
+        ]
+        assert index.search("kube-scheduler", AccessScope(TENANT_A, ("group",)), 10) == []
+    finally:
+        opensearch_client.indices.delete(index=index.index, ignore_unavailable=True)

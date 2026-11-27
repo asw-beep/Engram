@@ -42,7 +42,21 @@ BGE-reranker-v2-m3. The reranker's score decides whether there is enough evidenc
 reranker into `HF_HOME` on first use. Set it to keep them on a disk with room for about 6 GB.
 
 `reindex-keyword` fills an empty or rebuilt OpenSearch index with the current version of every
-document, for example after the first production start with an existing database.
+document. Ingestion fills the index as it publishes, but a database that already held documents
+before OpenSearch was added starts with an empty keyword index, so BM25 finds nothing until you
+run it. With the production Compose file, run it inside the API container from the repository
+root:
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.prod exec api python -m app.cli reindex-keyword
+```
+
+The reranker's latency was measured on the development laptop's GPU only (about 800 ms per
+question). Its latency on the production server's CPU is unmeasured. Phase 4 measures it, with
+the memory OpenSearch and the reranker need, before choosing the server size. To run without
+the reranker, add `RERANK_ENABLED: "false"` and `RETRIEVAL_MODE: dense` to the `api` service's
+`environment` in `docker-compose.prod.yml`. The two go together, because an unreranked hybrid
+ranking has no score that can decide whether there is enough evidence.
 
 ### Evaluation
 
