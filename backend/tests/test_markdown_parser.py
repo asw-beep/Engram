@@ -88,7 +88,7 @@ def test_shortcode_in_a_code_fence_stays():
 def test_shortcode_in_a_tilde_fence_stays():
     doc = parse_markdown(b"# T\n\n~~~yaml\n{{< note >}}\n~~~\n\n{{< note >}}after\n")
     text = doc.sections[-1].text
-    assert "~~~yaml\n{{< note >}}\n~~~" in text and text.endswith("after")
+    assert "~~~yaml\n{{< note >}}\n~~~" in text and text.endswith("\nafter")
 
 
 def test_line_numbers_are_unchanged_by_shortcodes():
@@ -99,3 +99,63 @@ def test_line_numbers_are_unchanged_by_shortcodes():
 def test_shortcode_in_a_heading_keeps_its_text():
     doc = parse_markdown(b'# The {{< glossary_tooltip text="Pod" term_id="pod" >}} lifecycle\nx\n')
     assert doc.sections[0].heading_path == ("The Pod lifecycle",)
+
+
+@pytest.mark.parametrize(
+    "fenced",
+    [
+        "1. Step\n\n   ```shell\n   {{< note >}}\n   ```\n",
+        "```\n~~~\n{{< note >}}\n```\n",
+        "````\n```\n{{< note >}}\n````\n",
+        "```\n``` x\n{{< note >}}\n```\n",
+    ],
+    ids=[
+        "list-item-fence",
+        "tilde-does-not-close-backticks",
+        "shorter-fence-does-not-close",
+        "fence-line-with-text-does-not-close",
+    ],
+)
+def test_a_fence_closes_only_on_its_own_marker(fenced):
+    doc = parse_markdown(("# T\n\n" + fenced + "\n{{< note >}}after\n").encode())
+    text = doc.sections[-1].text
+    assert text.count("{{< note >}}") == 1 and text.endswith("\nafter")
+
+
+def test_an_unclosed_fence_keeps_its_shortcodes():
+    doc = parse_markdown(b"# T\n\n```\n{{< note >}}\n")
+    assert "{{< note >}}" in doc.sections[-1].text
+
+
+def test_heading_shortcode_becomes_its_label():
+    doc = parse_markdown(b'# T\nx\n## {{% heading "whatsnext" %}}\ny\n')
+    assert doc.sections[-1].heading_path == ("T", "What's next")
+
+
+def test_unknown_heading_shortcode_uses_its_argument():
+    doc = parse_markdown(b'# {{% heading "release-notes" %}}\ny\n')
+    assert doc.sections[0].heading_path == ("Release notes",)
+
+
+def test_glossary_tooltip_without_text_keeps_the_term():
+    doc = parse_markdown(
+        b'# T\n\nAddons use ({{< glossary_tooltip term_id="daemonset" >}}, '
+        b'{{< glossary_tooltip term_id="config-map" >}}, etc).\n'
+    )
+    assert doc.sections[-1].text.endswith("Addons use (daemonset, config map, etc).")
+
+
+def test_a_shortcode_split_across_lines_is_removed():
+    doc = parse_markdown(
+        b'# T\n\nA {{< glossary_tooltip\n  text="Pod" term_id="pod" >}} runs.\n\n# B\n\ny\n'
+    )
+    first, last = doc.sections
+    assert "A Pod" in first.text and "term_id" not in first.text and "{{" not in first.text
+    assert (first.start_line, first.end_line) == (1, 4)
+    assert (last.start_line, last.end_line) == (6, 8)
+
+
+def test_a_split_shortcode_never_spans_a_fence():
+    doc = parse_markdown(b"# T\n\nx {{< note\n\n```\n>}}\n```\n")
+    text = doc.sections[-1].text
+    assert "{{< note" in text and "```\n>}}\n```" in text

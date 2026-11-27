@@ -17,9 +17,26 @@ _MARKDOWN = MarkdownIt("commonmark")
 _HEADING_ANCHOR = re.compile(r"\s*\{#[\w.:-]+\}$")
 # The same line breaks markdown-it normalises, so line numbers agree with its token maps.
 _LINE_BREAK = re.compile(r"\r\n?|\n")
-# A Hugo shortcode tag on one line: {{< name args >}}, {{% name args %}} or a closing tag.
-_SHORTCODE = re.compile(r"\{\{<(.*?)>\}\}|\{\{%(.*?)%\}\}")
+# A Hugo shortcode tag, {{< name args >}}, {{% name args %}} or a closing tag, which may run
+# over several lines. The body never contains another "{{" or "}}", so a stray opening
+# can't swallow the text up to some later tag.
+_SHORTCODE = re.compile(
+    r"\{\{<((?:(?!\{\{|\}\}).)*?)>\}\}|\{\{%((?:(?!\{\{|\}\}).)*?)%\}\}", re.DOTALL
+)
+_SHORTCODE_NAME = re.compile(r"\s*([\w-]+)")
 _TEXT_ATTRIBUTE = re.compile(r"""\btext=(?:"([^"]*)"|'([^']*)')""")
+_TERM_ATTRIBUTE = re.compile(r"""\bterm_id=(?:"([^"]*)"|'([^']*)')""")
+_FIRST_ARGUMENT = re.compile(r"""^\s*[\w-]+\s+(?:"([^"]*)"|'([^']*)')""")
+# The Kubernetes site's labels for {{% heading "..." %}}; others fall back to the argument.
+_HEADING_LABELS = {
+    "whatsnext": "What's next",
+    "prerequisites": "Before you begin",
+    "objectives": "Objectives",
+    "cleanup": "Clean up",
+    "seealso": "See also",
+    "synopsis": "Synopsis",
+    "options": "Options",
+}
 _FENCE = re.compile(r"^\s*(`{3,}|~{3,})")
 
 
@@ -57,13 +74,22 @@ def _blank_front_matter(lines: list[str]) -> list[str]:
 
 
 def _strip_shortcodes(lines: list[str]) -> list[str]:
-    """Remove Hugo shortcode tags outside code fences, keeping a `text` attribute's value.
+    """Replace Hugo shortcode tags outside code fences with the text they stand for.
 
-    Each line is rewritten in place, so line numbers still refer to the original file.
-    Shortcodes inside a fence are the content being shown, so they stay.
+    Each run of lines between fences is rewritten as one block, so a tag split over
+    several lines is found too. A replacement keeps the newlines of the tag it replaces,
+    so line numbers still refer to the original file. Shortcodes inside a fence are the
+    content being shown, so they stay.
     """
-    result = []
+    result: list[str] = []
+    prose: list[str] = []
     fence = ""
+
+    def flush() -> None:
+        if prose:
+            result.extend(_SHORTCODE.sub(_shortcode_text, "\n".join(prose)).split("\n"))
+            prose.clear()
+
     for line in lines:
         marker = _FENCE.match(line)
         if fence:
@@ -72,16 +98,44 @@ def _strip_shortcodes(lines: list[str]) -> list[str]:
                     fence = ""
             result.append(line)
         elif marker:
+            flush()
             fence = marker.group(1)
             result.append(line)
         else:
-            result.append(_SHORTCODE.sub(_shortcode_text, line))
+            prose.append(line)
+    flush()
     return result
 
 
 def _shortcode_text(match: re.Match[str]) -> str:
-    text = _TEXT_ATTRIBUTE.search(match.group(1) or match.group(2) or "")
-    return (text.group(1) if text.group(1) is not None else text.group(2)) if text else ""
+    body = match.group(1) if match.group(1) is not None else match.group(2)
+    return _shortcode_value(body) + "\n" * body.count("\n")
+
+
+def _shortcode_value(body: str) -> str:
+    """The text a tag stands for: its `text` attribute, a heading label, a glossary term."""
+    text = _quoted(_TEXT_ATTRIBUTE.search(body))
+    if text is not None:
+        return text
+    name = _SHORTCODE_NAME.match(body)
+    if name is None:
+        return ""
+    if name.group(1) == "heading":
+        argument = _quoted(_FIRST_ARGUMENT.match(body))
+        if argument:
+            label = argument.replace("-", " ").replace("_", " ").capitalize()
+            return _HEADING_LABELS.get(argument, label)
+    if name.group(1) == "glossary_tooltip":
+        term = _quoted(_TERM_ATTRIBUTE.search(body))
+        if term:
+            return term.replace("-", " ").replace("_", " ")
+    return ""
+
+
+def _quoted(match: re.Match[str] | None) -> str | None:
+    if match is None:
+        return None
+    return match.group(1) if match.group(1) is not None else match.group(2)
 
 
 def _headings(lines: list[str]) -> list[_Heading]:
