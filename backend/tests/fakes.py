@@ -7,6 +7,7 @@ import re
 from app.generation.base import GenerationRequest, GenerationResult
 from app.ingestion.connectors.base import ConnectorError, FileTooLarge
 from app.ingestion.types import FetchedFile, SourceItem
+from app.retrieval.rerank import RerankError
 
 _PUNCTUATION = re.compile(r"[^\w\s]")
 
@@ -35,6 +36,30 @@ class FakeEmbedder:
             vector[int.from_bytes(digest[:4], "big") % self.dimension] += 1.0
         norm = math.sqrt(sum(value * value for value in vector)) or 1.0
         return [value / norm for value in vector]
+
+
+def _words(text: str) -> set[str]:
+    return set(_PUNCTUATION.sub("", text.lower()).split())
+
+
+class FakeReranker:
+    """Scores a passage by the share of the query's words it holds, from 0 to 1, and records
+    every call."""
+
+    def __init__(self):
+        self.calls: list[tuple[str, list[str]]] = []
+
+    def score(self, query: str, passages: list[str]) -> list[float]:
+        self.calls.append((query, list(passages)))
+        wanted = _words(query)
+        if not wanted:
+            return [0.0 for _ in passages]
+        return [len(wanted & _words(passage)) / len(wanted) for passage in passages]
+
+
+class FailingReranker:
+    def score(self, query: str, passages: list[str]) -> list[float]:
+        raise RerankError("the reranker could not run (test)")
 
 
 class FailingKeywordIndex:

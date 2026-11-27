@@ -13,19 +13,26 @@ from pathlib import Path
 
 from eval.dataset import KINDS, Question, load_questions
 
-CONFIGS = ("dense", "hybrid", "hybrid_rerank")
+CONFIGS = ("dense", "hybrid", "dense_rerank", "hybrid_rerank")
 DESCRIPTIONS = {
     "dense": "BGE-M3 vectors in Qdrant",
     "hybrid": "dense and BM25 (OpenSearch), fused with RRF",
+    "dense_rerank": "dense, then BGE-reranker-v2-m3",
     "hybrid_rerank": "hybrid, then BGE-reranker-v2-m3",
 }
 RECALL_TARGET = 0.85
 LATENCY_TARGET_MS = 5000
 
 
-def render(results: dict[str, dict], questions: list[Question], reviewed: bool) -> str:
+def render(
+    results: dict[str, dict],
+    questions: list[Question],
+    reviewed: bool,
+    calibration: dict[str, dict] | None = None,
+) -> str:
     parts = [_heading(reviewed), _dataset(results, questions), _quality(results)]
-    parts += [_by_kind(results, questions), _gate(results), _latency(results)]
+    parts += [_by_kind(results, questions), _gate(results, calibration or {})]
+    parts += [_latency(results)]
     parts += [_targets(results, reviewed), _limits(questions, reviewed)]
     return "\n\n".join(parts) + "\n"
 
@@ -122,12 +129,14 @@ def _by_kind(results: dict[str, dict], questions: list[Question]) -> str:
         "## By question kind (test split, Recall@5 / MRR@10)\n\n"
         "| Kind | Questions | "
         + " | ".join(CONFIGS)
-        + " |\n|---|---:|---|---|---|\n"
+        + " |\n|---|---:|"
+        + "---|" * len(CONFIGS)
+        + "\n"
         + "\n".join(rows)
     )
 
 
-def _gate(results: dict[str, dict]) -> str:
+def _gate(results: dict[str, dict], calibration: dict[str, dict]) -> str:
     rows = []
     for config in CONFIGS:
         gate = _summary(results, config).get("evidence_gate")
@@ -152,10 +161,27 @@ def _gate(results: dict[str, dict]) -> str:
         "`answer_question` applies. This is the score gate only: the API also refuses when "
         "every passage above the cutoff is too large for the context budget, which the harness "
         "doesn't model. Balanced accuracy is the mean of the two shares. A `configured` "
-        "cutoff is the `evidence_min_score` setting, not tuned on this dataset; a calibrated "
-        "one was chosen on the `dev` split only. Unreranked `hybrid` has no gate: its scores "
-        "are RRF values, which rank passages but aren't comparable to a cutoff."
+        "cutoff is taken from the settings as given, not tuned on this dataset: "
+        "`dense_min_score` for dense similarities and `rerank_min_score` for reranker scores. "
+        "A calibrated one was chosen on the `dev` split only. Unreranked `hybrid` has no gate: "
+        "its scores are RRF values, which rank passages but aren't comparable to a cutoff."
+        + "".join(_calibrated(results, config, entry) for config, entry in calibration.items())
     )
+
+
+def _calibrated(results: dict[str, dict], config: str, entry: dict) -> str:
+    dev = entry["dev"]
+    text = (
+        f"\n\nThe calibrated cutoff for `{config}`, {entry['cutoff']}, is {entry['rule']}. "
+        f"Its balanced accuracy is {dev['balanced_accuracy']:.3f} on `dev` "
+        f"({dev['answerable']} answerable and {dev['unanswerable']} unanswerable questions)"
+    )
+    gate = _summary(results, config).get("evidence_gate")
+    if config not in results:
+        return text + f"; `{config}` hasn't been run on `test`."
+    if not gate or gate.get("cutoff") != entry["cutoff"]:
+        return text + f"; the `{config}` run on `test` used another cutoff, so rerun it."
+    return text + f" and {gate['balanced_accuracy']:.3f} on `test`."
 
 
 def _latency(results: dict[str, dict]) -> str:
@@ -195,7 +221,7 @@ def _targets(results: dict[str, dict], reviewed: bool) -> str:
             cells.append(f"{met} ({overall['recall@5']:.3f})")
     return (
         "## Plan.md §10.5 targets\n\n"
-        "| Target | " + " | ".join(CONFIGS) + " |\n|---|---|---|---|\n"
+        "| Target | " + " | ".join(CONFIGS) + " |\n|---|" + "---|" * len(CONFIGS) + "\n"
         f"| Recall@5 ≥ {RECALL_TARGET:.0%} | " + " | ".join(cells) + " |\n\n"
         "A target is called met or missed only once the owner has reviewed the question "
         "sample. "
@@ -266,7 +292,13 @@ def main(argv: list[str] | None = None) -> int:
     reviewed = args.review.exists() and bool(
         json.loads(args.review.read_text(encoding="utf-8")).get("reviewed_on")
     )
-    text = render(results, load_questions(args.questions), reviewed)
+    calibration_file = args.results / "calibration.json"
+    calibration = (
+        json.loads(calibration_file.read_text(encoding="utf-8"))
+        if calibration_file.exists()
+        else {}
+    )
+    text = render(results, load_questions(args.questions), reviewed, calibration)
     args.out.write_text(text, encoding="utf-8")
     print(f"Wrote {args.out.as_posix()} ({', '.join(results) or 'no runs'})")
     return 0

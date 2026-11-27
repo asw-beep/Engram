@@ -1,18 +1,22 @@
 {
   "config": "dense",
-  "created_at": "2026-11-27T05:42:39+00:00",
+  "created_at": "2026-11-27T10:18:50+00:00",
   "questions_file": "eval/questions.jsonl",
   "settings": {
     "retrieval_mode": "dense",
+    "rerank_enabled": false,
     "candidate_limit": 50,
     "rrf_k": 60,
     "retrieval_limit": 30,
     "max_passages": 8,
     "max_context_tokens": 4000,
-    "evidence_min_score": 0.5,
+    "dense_min_score": 0.5,
+    "rerank_min_score": 0.5,
     "embedding_model_id": "BAAI/bge-m3",
     "embedding_device": "cuda",
     "embedding_model_revision": "5617a9f61b028005a4858fdac845db406aefb181",
+    "reranker_model_id": "BAAI/bge-reranker-v2-m3",
+    "reranker_model_revision": "953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e",
     "qdrant_collection": "chunks_bge_m3_v1",
     "opensearch_index": "chunks_v1"
   },
@@ -241,7 +245,7 @@
         }
       ],
       "top_score": 0.7644481,
-      "latency_ms": 77,
+      "latency_ms": 52,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/statefulset.md"
@@ -482,7 +486,7 @@
         }
       ],
       "top_score": 0.70263785,
-      "latency_ms": 61,
+      "latency_ms": 42,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/statefulset.md"
@@ -719,7 +723,7 @@
         }
       ],
       "top_score": 0.78422326,
-      "latency_ms": 35,
+      "latency_ms": 51,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/deployment.md"
@@ -955,7 +959,7 @@
         }
       ],
       "top_score": 0.72255147,
-      "latency_ms": 36,
+      "latency_ms": 29,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/deployment.md"
@@ -1186,7 +1190,7 @@
         }
       ],
       "top_score": 0.7424712,
-      "latency_ms": 70,
+      "latency_ms": 60,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/deployment.md"
@@ -1407,7 +1411,7 @@
         }
       ],
       "top_score": 0.79815304,
-      "latency_ms": 33,
+      "latency_ms": 40,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/daemonset.md"
@@ -1645,7 +1649,7 @@
         }
       ],
       "top_score": 0.70106196,
-      "latency_ms": 37,
+      "latency_ms": 35,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/job.md"
@@ -1879,7 +1883,7 @@
         }
       ],
       "top_score": 0.7115363,
-      "latency_ms": 47,
+      "latency_ms": 46,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/job.md"
@@ -2114,7 +2118,7 @@
         }
       ],
       "top_score": 0.8063874,
-      "latency_ms": 46,
+      "latency_ms": 100,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/pods/probes.md"
@@ -2356,7 +2360,7 @@
         }
       ],
       "top_score": 0.7118617,
-      "latency_ms": 60,
+      "latency_ms": 91,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/pods/pod-lifecycle.md"
@@ -2580,7 +2584,7 @@
         }
       ],
       "top_score": 0.72938114,
-      "latency_ms": 26,
+      "latency_ms": 40,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/pods/pod-lifecycle.md"
@@ -2812,7 +2816,7 @@
         }
       ],
       "top_score": 0.763214,
-      "latency_ms": 42,
+      "latency_ms": 61,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/pods/init-containers.md"
@@ -3058,7 +3062,7 @@
         }
       ],
       "top_score": 0.7776268,
-      "latency_ms": 30,
+      "latency_ms": 91,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/pods/sidecar-containers.md"
@@ -3274,7 +3278,7 @@
         }
       ],
       "top_score": 0.80051017,
-      "latency_ms": 27,
+      "latency_ms": 64,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/pods/_index.md"
@@ -3511,7 +3515,7 @@
         }
       ],
       "top_score": 0.6414397,
-      "latency_ms": 25,
+      "latency_ms": 47,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/pods/static-pods.md"
@@ -3744,7 +3748,7 @@
         }
       ],
       "top_score": 0.71979535,
-      "latency_ms": 24,
+      "latency_ms": 69,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/pods/disruptions.md"
@@ -3975,7 +3979,7 @@
         }
       ],
       "top_score": 0.7812639,
-      "latency_ms": 29,
+      "latency_ms": 63,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/autoscaling/horizontal-pod-autoscale.md"
@@ -4204,7 +4208,7 @@
         }
       ],
       "top_score": 0.7912183,
-      "latency_ms": 43,
+      "latency_ms": 69,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/pods/pod-qos.md"
@@ -4418,7 +4422,7 @@
         }
       ],
       "top_score": 0.7453065,
-      "latency_ms": 41,
+      "latency_ms": 47,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/services-networking/network-policies.md"
@@ -4645,7 +4649,7 @@
         }
       ],
       "top_score": 0.75023484,
-      "latency_ms": 37,
+      "latency_ms": 32,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/services-networking/network-policies.md"
@@ -4884,7 +4888,7 @@
         }
       ],
       "top_score": 0.660952,
-      "latency_ms": 39,
+      "latency_ms": 45,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/services-networking/service.md"
@@ -5116,7 +5120,7 @@
         }
       ],
       "top_score": 0.72627103,
-      "latency_ms": 59,
+      "latency_ms": 56,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/services-networking/service.md"
@@ -5352,7 +5356,7 @@
         }
       ],
       "top_score": 0.72900337,
-      "latency_ms": 33,
+      "latency_ms": 64,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/services-networking/ingress.md"
@@ -5573,7 +5577,7 @@
         }
       ],
       "top_score": 0.7769152,
-      "latency_ms": 27,
+      "latency_ms": 79,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/services-networking/gateway.md"
@@ -5795,7 +5799,7 @@
         }
       ],
       "top_score": 0.65758514,
-      "latency_ms": 62,
+      "latency_ms": 67,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/services-networking/service.md"
@@ -6015,7 +6019,7 @@
         }
       ],
       "top_score": 0.7199528,
-      "latency_ms": 26,
+      "latency_ms": 82,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/services-networking/topology-aware-routing.md"
@@ -6263,7 +6267,7 @@
         }
       ],
       "top_score": 0.7387247,
-      "latency_ms": 26,
+      "latency_ms": 88,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/storage/persistent-volumes.md"
@@ -6501,7 +6505,7 @@
         }
       ],
       "top_score": 0.72922045,
-      "latency_ms": 53,
+      "latency_ms": 49,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/storage/persistent-volumes.md"
@@ -6743,7 +6747,7 @@
         }
       ],
       "top_score": 0.71857977,
-      "latency_ms": 30,
+      "latency_ms": 55,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/storage/persistent-volumes.md"
@@ -6980,7 +6984,7 @@
         }
       ],
       "top_score": 0.76252604,
-      "latency_ms": 42,
+      "latency_ms": 28,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/storage/dynamic-provisioning.md"
@@ -7226,7 +7230,7 @@
         }
       ],
       "top_score": 0.7183326,
-      "latency_ms": 71,
+      "latency_ms": 30,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/storage/volumes.md"
@@ -7466,7 +7470,7 @@
         }
       ],
       "top_score": 0.7530063,
-      "latency_ms": 31,
+      "latency_ms": 74,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/storage/volumes.md"
@@ -7701,7 +7705,7 @@
         }
       ],
       "top_score": 0.75256276,
-      "latency_ms": 24,
+      "latency_ms": 67,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/configuration/configmap.md"
@@ -7933,7 +7937,7 @@
         }
       ],
       "top_score": 0.72018313,
-      "latency_ms": 55,
+      "latency_ms": 58,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/security/secrets-good-practices.md"
@@ -8150,7 +8154,7 @@
         }
       ],
       "top_score": 0.77345896,
-      "latency_ms": 40,
+      "latency_ms": 42,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/configuration/manage-resources-containers.md"
@@ -8382,7 +8386,7 @@
         }
       ],
       "top_score": 0.7436719,
-      "latency_ms": 26,
+      "latency_ms": 25,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/configuration/manage-resources-containers.md"
@@ -8617,7 +8621,7 @@
         }
       ],
       "top_score": 0.7186903,
-      "latency_ms": 28,
+      "latency_ms": 26,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/policy/resource-quotas.md"
@@ -8859,7 +8863,7 @@
         }
       ],
       "top_score": 0.70746917,
-      "latency_ms": 62,
+      "latency_ms": 33,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/security/pod-security-standards.md"
@@ -9099,7 +9103,7 @@
         }
       ],
       "top_score": 0.80439436,
-      "latency_ms": 68,
+      "latency_ms": 75,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/security/rbac-good-practices.md"
@@ -9320,7 +9324,7 @@
         }
       ],
       "top_score": 0.77027494,
-      "latency_ms": 48,
+      "latency_ms": 92,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/security/service-accounts.md"
@@ -9553,7 +9557,7 @@
         }
       ],
       "top_score": 0.7016521,
-      "latency_ms": 55,
+      "latency_ms": 32,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/security/multi-tenancy.md"
@@ -9782,7 +9786,7 @@
         }
       ],
       "top_score": 0.7593534,
-      "latency_ms": 51,
+      "latency_ms": 45,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/scheduling-eviction/taint-and-toleration.md"
@@ -10021,7 +10025,7 @@
         }
       ],
       "top_score": 0.70534915,
-      "latency_ms": 51,
+      "latency_ms": 68,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/scheduling-eviction/assign-pod-node.md"
@@ -10270,7 +10274,7 @@
         }
       ],
       "top_score": 0.7138586,
-      "latency_ms": 67,
+      "latency_ms": 60,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/scheduling-eviction/topology-spread-constraints.md"
@@ -10498,7 +10502,7 @@
         }
       ],
       "top_score": 0.82211304,
-      "latency_ms": 55,
+      "latency_ms": 49,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/scheduling-eviction/pod-priority-preemption.md"
@@ -10722,7 +10726,7 @@
         }
       ],
       "top_score": 0.78816766,
-      "latency_ms": 34,
+      "latency_ms": 37,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/scheduling-eviction/node-pressure-eviction.md"
@@ -10950,7 +10954,7 @@
         }
       ],
       "top_score": 0.76740676,
-      "latency_ms": 58,
+      "latency_ms": 56,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/architecture/control-plane-node-communication.md"
@@ -11155,7 +11159,7 @@
         }
       ],
       "top_score": 0.7177294,
-      "latency_ms": 89,
+      "latency_ms": 22,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/architecture/controller.md"
@@ -11391,7 +11395,7 @@
         }
       ],
       "top_score": 0.7604772,
-      "latency_ms": 70,
+      "latency_ms": 23,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/architecture/nodes.md"
@@ -11633,7 +11637,7 @@
         }
       ],
       "top_score": 0.69439507,
-      "latency_ms": 46,
+      "latency_ms": 26,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/architecture/garbage-collection.md"
@@ -11881,7 +11885,7 @@
         }
       ],
       "top_score": 0.8006985,
-      "latency_ms": 67,
+      "latency_ms": 49,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/architecture/garbage-collection.md"
@@ -12111,7 +12115,7 @@
         }
       ],
       "top_score": 0.72616744,
-      "latency_ms": 74,
+      "latency_ms": 77,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/overview/working-with-objects/namespaces.md"
@@ -12354,7 +12358,7 @@
         }
       ],
       "top_score": 0.68877864,
-      "latency_ms": 35,
+      "latency_ms": 69,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/overview/working-with-objects/labels.md"
@@ -12586,7 +12590,7 @@
         }
       ],
       "top_score": 0.7360543,
-      "latency_ms": 28,
+      "latency_ms": 72,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/overview/working-with-objects/finalizers.md"
@@ -12826,7 +12830,7 @@
         }
       ],
       "top_score": 0.73253053,
-      "latency_ms": 27,
+      "latency_ms": 48,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/cluster-administration/flow-control.md"
@@ -13060,7 +13064,7 @@
         }
       ],
       "top_score": 0.6941318,
-      "latency_ms": 24,
+      "latency_ms": 32,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/containers/container-lifecycle-hooks.md"
@@ -13261,7 +13265,7 @@
         }
       ],
       "top_score": 0.6943641,
-      "latency_ms": 46,
+      "latency_ms": 26,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/extend-kubernetes/operator.md"
@@ -13486,7 +13490,7 @@
         }
       ],
       "top_score": 0.7864207,
-      "latency_ms": 53,
+      "latency_ms": 47,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/extend-kubernetes/api-extension/custom-resources.md"
@@ -13723,7 +13727,7 @@
         }
       ],
       "top_score": 0.75089294,
-      "latency_ms": 40,
+      "latency_ms": 63,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/cluster-administration/node-shutdown.md"
@@ -13944,7 +13948,7 @@
         }
       ],
       "top_score": 0.7161265,
-      "latency_ms": 27,
+      "latency_ms": 77,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/cluster-administration/logging.md"
@@ -14158,7 +14162,7 @@
         }
       ],
       "top_score": 0.76333284,
-      "latency_ms": 27,
+      "latency_ms": 47,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/overview/kubernetes-api.md"
@@ -14634,7 +14638,7 @@
         }
       ],
       "top_score": 0.74657285,
-      "latency_ms": 66,
+      "latency_ms": 26,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/deployment.md"
@@ -14884,7 +14888,7 @@
         }
       ],
       "top_score": 0.72545403,
-      "latency_ms": 78,
+      "latency_ms": 23,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/deployment.md"
@@ -15124,7 +15128,7 @@
         }
       ],
       "top_score": 0.78705364,
-      "latency_ms": 91,
+      "latency_ms": 46,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/deployment.md"
@@ -15363,7 +15367,7 @@
         }
       ],
       "top_score": 0.69995105,
-      "latency_ms": 65,
+      "latency_ms": 40,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/cron-jobs.md"
@@ -15601,7 +15605,7 @@
         }
       ],
       "top_score": 0.7530378,
-      "latency_ms": 42,
+      "latency_ms": 36,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/cron-jobs.md"
@@ -15850,7 +15854,7 @@
         }
       ],
       "top_score": 0.71099186,
-      "latency_ms": 37,
+      "latency_ms": 63,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/job.md"
@@ -16091,7 +16095,7 @@
         }
       ],
       "top_score": 0.7178017,
-      "latency_ms": 33,
+      "latency_ms": 57,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/statefulset.md"
@@ -16326,7 +16330,7 @@
         }
       ],
       "top_score": 0.7396262,
-      "latency_ms": 52,
+      "latency_ms": 96,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/statefulset.md"
@@ -16568,7 +16572,7 @@
         }
       ],
       "top_score": 0.7824783,
-      "latency_ms": 66,
+      "latency_ms": 35,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/statefulset.md"
@@ -16816,7 +16820,7 @@
         }
       ],
       "top_score": 0.7068625,
-      "latency_ms": 69,
+      "latency_ms": 66,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/pods/probes.md"
@@ -17072,7 +17076,7 @@
         }
       ],
       "top_score": 0.6717159,
-      "latency_ms": 28,
+      "latency_ms": 43,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/containers/images.md"
@@ -17324,7 +17328,7 @@
         }
       ],
       "top_score": 0.74748456,
-      "latency_ms": 28,
+      "latency_ms": 44,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/containers/images.md"
@@ -17570,7 +17574,7 @@
         }
       ],
       "top_score": 0.68165904,
-      "latency_ms": 23,
+      "latency_ms": 49,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/services-networking/service.md"
@@ -17809,7 +17813,7 @@
         }
       ],
       "top_score": 0.6769019,
-      "latency_ms": 53,
+      "latency_ms": 26,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/services-networking/ingress.md"
@@ -18042,7 +18046,7 @@
         }
       ],
       "top_score": 0.8096344,
-      "latency_ms": 47,
+      "latency_ms": 45,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/services-networking/ingress.md"
@@ -18278,7 +18282,7 @@
         }
       ],
       "top_score": 0.7659027,
-      "latency_ms": 50,
+      "latency_ms": 30,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/services-networking/dns-pod-service.md"
@@ -18755,7 +18759,7 @@
         }
       ],
       "top_score": 0.71524066,
-      "latency_ms": 46,
+      "latency_ms": 25,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/storage/storage-classes.md"
@@ -18995,7 +18999,7 @@
         }
       ],
       "top_score": 0.67246664,
-      "latency_ms": 59,
+      "latency_ms": 25,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/storage/volumes.md"
@@ -19230,7 +19234,7 @@
         }
       ],
       "top_score": 0.6874182,
-      "latency_ms": 25,
+      "latency_ms": 60,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/storage/volumes.md"
@@ -19469,7 +19473,7 @@
         }
       ],
       "top_score": 0.8015582,
-      "latency_ms": 36,
+      "latency_ms": 68,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/configuration/secret.md"
@@ -19713,7 +19717,7 @@
         }
       ],
       "top_score": 0.71039754,
-      "latency_ms": 23,
+      "latency_ms": 75,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/configuration/secret.md"
@@ -19963,7 +19967,7 @@
         }
       ],
       "top_score": 0.77063453,
-      "latency_ms": 24,
+      "latency_ms": 100,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/configuration/manage-resources-containers.md"
@@ -20194,7 +20198,7 @@
         }
       ],
       "top_score": 0.7184806,
-      "latency_ms": 24,
+      "latency_ms": 98,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/security/pod-security-admission.md"
@@ -20427,7 +20431,7 @@
         }
       ],
       "top_score": 0.7114253,
-      "latency_ms": 34,
+      "latency_ms": 47,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/scheduling-eviction/taint-and-toleration.md"
@@ -20673,7 +20677,7 @@
         }
       ],
       "top_score": 0.711941,
-      "latency_ms": 53,
+      "latency_ms": 46,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/scheduling-eviction/topology-spread-constraints.md"
@@ -20912,7 +20916,7 @@
         }
       ],
       "top_score": 0.6830722,
-      "latency_ms": 33,
+      "latency_ms": 30,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/scheduling-eviction/pod-priority-preemption.md"
@@ -21165,7 +21169,7 @@
         }
       ],
       "top_score": 0.68199676,
-      "latency_ms": 51,
+      "latency_ms": 55,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/scheduling-eviction/node-pressure-eviction.md"
@@ -21399,7 +21403,7 @@
         }
       ],
       "top_score": 0.650702,
-      "latency_ms": 30,
+      "latency_ms": 49,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/overview/working-with-objects/field-selectors.md"
@@ -21620,7 +21624,7 @@
         }
       ],
       "top_score": 0.74976,
-      "latency_ms": 46,
+      "latency_ms": 72,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/scheduling-eviction/pod-scheduling-readiness.md"
@@ -21847,7 +21851,7 @@
         }
       ],
       "top_score": 0.6283574,
-      "latency_ms": 76,
+      "latency_ms": 68,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/autoscaling/horizontal-pod-autoscale.md"
@@ -22083,7 +22087,7 @@
         }
       ],
       "top_score": 0.7208253,
-      "latency_ms": 105,
+      "latency_ms": 49,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/autoscaling/vertical-pod-autoscale.md"
@@ -22328,7 +22332,7 @@
         }
       ],
       "top_score": 0.6590694,
-      "latency_ms": 71,
+      "latency_ms": 58,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/pods/user-namespaces.md"
@@ -22553,7 +22557,7 @@
         }
       ],
       "top_score": 0.6980834,
-      "latency_ms": 30,
+      "latency_ms": 42,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/cluster-administration/node-shutdown.md"
@@ -22804,7 +22808,7 @@
         }
       ],
       "top_score": 0.7446101,
-      "latency_ms": 40,
+      "latency_ms": 26,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/services-networking/dual-stack.md"
@@ -23037,7 +23041,7 @@
         }
       ],
       "top_score": 0.7999188,
-      "latency_ms": 55,
+      "latency_ms": 61,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/services-networking/topology-aware-routing.md"
@@ -23266,7 +23270,7 @@
         }
       ],
       "top_score": 0.6123677,
-      "latency_ms": 62,
+      "latency_ms": 73,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/policy/resource-quotas.md"
@@ -23502,7 +23506,7 @@
         }
       ],
       "top_score": 0.6840909,
-      "latency_ms": 53,
+      "latency_ms": 69,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/configuration/configmap.md"
@@ -23755,7 +23759,7 @@
         }
       ],
       "top_score": 0.6563662,
-      "latency_ms": 32,
+      "latency_ms": 70,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/pods/pod-lifecycle.md"
@@ -24004,7 +24008,7 @@
         }
       ],
       "top_score": 0.8125587,
-      "latency_ms": 31,
+      "latency_ms": 60,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/storage/persistent-volumes.md"
@@ -24243,7 +24247,7 @@
         }
       ],
       "top_score": 0.76642025,
-      "latency_ms": 33,
+      "latency_ms": 27,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/pods/probes.md"
@@ -24485,7 +24489,7 @@
         }
       ],
       "top_score": 0.7300048,
-      "latency_ms": 28,
+      "latency_ms": 21,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/deployment.md"
@@ -24719,7 +24723,7 @@
         }
       ],
       "top_score": 0.75846016,
-      "latency_ms": 33,
+      "latency_ms": 49,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/configuration/configmap.md",
@@ -24958,7 +24962,7 @@
         }
       ],
       "top_score": 0.747649,
-      "latency_ms": 25,
+      "latency_ms": 51,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/scheduling-eviction/assign-pod-node.md",
@@ -25193,7 +25197,7 @@
         }
       ],
       "top_score": 0.7355827,
-      "latency_ms": 48,
+      "latency_ms": 73,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/policy/limit-range.md",
@@ -25428,7 +25432,7 @@
         }
       ],
       "top_score": 0.73250455,
-      "latency_ms": 56,
+      "latency_ms": 47,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/scheduling-eviction/pod-priority-preemption.md",
@@ -25665,7 +25669,7 @@
         }
       ],
       "top_score": 0.7120019,
-      "latency_ms": 31,
+      "latency_ms": 71,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/scheduling-eviction/api-eviction.md",
@@ -25909,7 +25913,7 @@
         }
       ],
       "top_score": 0.7643844,
-      "latency_ms": 55,
+      "latency_ms": 37,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/pods/init-containers.md",
@@ -26147,7 +26151,7 @@
         }
       ],
       "top_score": 0.7022935,
-      "latency_ms": 50,
+      "latency_ms": 51,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/services-networking/cluster-ip-allocation.md",
@@ -26377,7 +26381,7 @@
         }
       ],
       "top_score": 0.66057646,
-      "latency_ms": 33,
+      "latency_ms": 45,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/services-networking/gateway.md",
@@ -26610,7 +26614,7 @@
         }
       ],
       "top_score": 0.78356206,
-      "latency_ms": 45,
+      "latency_ms": 31,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/security/pod-security-admission.md",
@@ -26853,7 +26857,7 @@
         }
       ],
       "top_score": 0.6870826,
-      "latency_ms": 68,
+      "latency_ms": 28,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/job.md"
@@ -27075,7 +27079,7 @@
         }
       ],
       "top_score": 0.6948883,
-      "latency_ms": 72,
+      "latency_ms": 29,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/architecture/garbage-collection.md",
@@ -27307,7 +27311,7 @@
         }
       ],
       "top_score": 0.68055165,
-      "latency_ms": 61,
+      "latency_ms": 47,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/storage/ephemeral-volumes.md",
@@ -27549,7 +27553,7 @@
         }
       ],
       "top_score": 0.72660935,
-      "latency_ms": 48,
+      "latency_ms": 39,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/cron-jobs.md"
@@ -27777,7 +27781,7 @@
         }
       ],
       "top_score": 0.7725002,
-      "latency_ms": 47,
+      "latency_ms": 59,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/services-networking/network-policies.md"
@@ -27995,7 +27999,7 @@
         }
       ],
       "top_score": 0.6909415,
-      "latency_ms": 34,
+      "latency_ms": 30,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/configuration/organize-cluster-access-kubeconfig.md"
@@ -28232,7 +28236,7 @@
         }
       ],
       "top_score": 0.7448757,
-      "latency_ms": 56,
+      "latency_ms": 27,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/statefulset.md"
@@ -28456,7 +28460,7 @@
         }
       ],
       "top_score": 0.6869973,
-      "latency_ms": 54,
+      "latency_ms": 61,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/overview/working-with-objects/annotations.md",
@@ -28697,7 +28701,7 @@
         }
       ],
       "top_score": 0.7759463,
-      "latency_ms": 55,
+      "latency_ms": 49,
       "mode": "dense",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/deployment.md"
@@ -28938,7 +28942,7 @@
         }
       ],
       "top_score": 0.3745333,
-      "latency_ms": 54,
+      "latency_ms": 85,
       "mode": "dense",
       "outside": []
     },
@@ -29162,7 +29166,7 @@
         }
       ],
       "top_score": 0.59133565,
-      "latency_ms": 33,
+      "latency_ms": 56,
       "mode": "dense",
       "outside": []
     },
@@ -29385,7 +29389,7 @@
         }
       ],
       "top_score": 0.34296942,
-      "latency_ms": 65,
+      "latency_ms": 60,
       "mode": "dense",
       "outside": []
     },
@@ -29612,7 +29616,7 @@
         }
       ],
       "top_score": 0.59539086,
-      "latency_ms": 72,
+      "latency_ms": 56,
       "mode": "dense",
       "outside": []
     },
@@ -29858,7 +29862,7 @@
         }
       ],
       "top_score": 0.4828166,
-      "latency_ms": 37,
+      "latency_ms": 51,
       "mode": "dense",
       "outside": []
     },
@@ -30082,7 +30086,7 @@
         }
       ],
       "top_score": 0.60612786,
-      "latency_ms": 25,
+      "latency_ms": 84,
       "mode": "dense",
       "outside": []
     },
@@ -30314,7 +30318,7 @@
         }
       ],
       "top_score": 0.33144045,
-      "latency_ms": 41,
+      "latency_ms": 86,
       "mode": "dense",
       "outside": []
     },
@@ -30550,7 +30554,7 @@
         }
       ],
       "top_score": 0.54581267,
-      "latency_ms": 34,
+      "latency_ms": 61,
       "mode": "dense",
       "outside": []
     },
@@ -30772,7 +30776,7 @@
         }
       ],
       "top_score": 0.38099593,
-      "latency_ms": 48,
+      "latency_ms": 47,
       "mode": "dense",
       "outside": []
     },
@@ -30991,7 +30995,7 @@
         }
       ],
       "top_score": 0.6621575,
-      "latency_ms": 50,
+      "latency_ms": 51,
       "mode": "dense",
       "outside": []
     },
@@ -31208,7 +31212,7 @@
         }
       ],
       "top_score": 0.43405038,
-      "latency_ms": 31,
+      "latency_ms": 47,
       "mode": "dense",
       "outside": []
     },
@@ -31406,7 +31410,7 @@
         }
       ],
       "top_score": 0.61133766,
-      "latency_ms": 48,
+      "latency_ms": 43,
       "mode": "dense",
       "outside": []
     },
@@ -31633,7 +31637,7 @@
         }
       ],
       "top_score": 0.3124423,
-      "latency_ms": 55,
+      "latency_ms": 25,
       "mode": "dense",
       "outside": []
     },
@@ -31825,7 +31829,7 @@
         }
       ],
       "top_score": 0.6140584,
-      "latency_ms": 42,
+      "latency_ms": 23,
       "mode": "dense",
       "outside": []
     },
@@ -32077,7 +32081,7 @@
         }
       ],
       "top_score": 0.37229222,
-      "latency_ms": 82,
+      "latency_ms": 23,
       "mode": "dense",
       "outside": []
     },
@@ -32279,7 +32283,7 @@
         }
       ],
       "top_score": 0.6201117,
-      "latency_ms": 50,
+      "latency_ms": 24,
       "mode": "dense",
       "outside": []
     },
@@ -32520,7 +32524,7 @@
         }
       ],
       "top_score": 0.49464434,
-      "latency_ms": 25,
+      "latency_ms": 45,
       "mode": "dense",
       "outside": []
     },
@@ -32741,7 +32745,7 @@
         }
       ],
       "top_score": 0.59709513,
-      "latency_ms": 28,
+      "latency_ms": 44,
       "mode": "dense",
       "outside": []
     },
@@ -32975,7 +32979,7 @@
         }
       ],
       "top_score": 0.41003406,
-      "latency_ms": 45,
+      "latency_ms": 26,
       "mode": "dense",
       "outside": []
     },
@@ -33198,7 +33202,7 @@
         }
       ],
       "top_score": 0.64154565,
-      "latency_ms": 30,
+      "latency_ms": 60,
       "mode": "dense",
       "outside": []
     }
@@ -33238,8 +33242,8 @@
       }
     },
     "latency_ms": {
-      "median": 42,
-      "p95": 72
+      "median": 49,
+      "p95": 88
     },
     "evidence_gate": {
       "cutoff": 0.5,

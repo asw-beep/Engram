@@ -1,6 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -29,13 +30,22 @@ class Settings(BaseSettings):
     llm_timeout_seconds: float = 60.0
     retry_wait_seconds: float = 1.0
 
-    # Calibrated with BGE-M3 on 10 smoke questions (docs/phase-1-smoke-results.md).
-    evidence_min_score: float = 0.50
+    # The evidence cutoff for unreranked dense scores, calibrated with BGE-M3 on 10 smoke
+    # questions (docs/phase-1-smoke-results.md).
+    dense_min_score: float = 0.50
+    # The evidence cutoff for BGE-reranker-v2-m3 scores, chosen on the dev split by
+    # `eval.calibrate --config hybrid_rerank` (eval/results/calibration.json,
+    # docs/phase-2-evaluation.md). Recalibrate when the reranker or the corpus changes.
+    rerank_min_score: float = 0.74
     max_chunk_tokens: int = 512
     chunk_overlap_tokens: int = 50
-    # Dense until reranking lands: unreranked hybrid scores are RRF values, which rank
-    # passages but aren't comparable to evidence_min_score.
-    retrieval_mode: Literal["dense", "hybrid"] = "dense"
+    # Hybrid needs reranking: unreranked hybrid scores are RRF values, which rank
+    # passages but aren't comparable to any evidence cutoff.
+    retrieval_mode: Literal["dense", "hybrid"] = "hybrid"
+    rerank_enabled: bool = True
+    reranker_model_id: str = "BAAI/bge-reranker-v2-m3"
+    reranker_model_revision: str = "953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e"
+    reranker_batch_size: int = 16
     candidate_limit: int = 50
     rrf_k: int = 60
     retrieval_limit: int = 30
@@ -47,6 +57,16 @@ class Settings(BaseSettings):
     github_token: str | None = None
     # Repository tarballs are saved here while a sync reads them, inside the project's data/.
     download_dir: str = "../data/downloads"
+
+    @model_validator(mode="after")
+    def _hybrid_needs_reranking(self) -> "Settings":
+        if self.retrieval_mode == "hybrid" and not self.rerank_enabled:
+            raise ValueError(
+                "retrieval_mode hybrid needs rerank_enabled: unreranked hybrid scores are "
+                "RRF values, which can't be compared with an evidence cutoff. Set "
+                "retrieval_mode to dense to run without the reranker."
+            )
+        return self
 
 
 @lru_cache

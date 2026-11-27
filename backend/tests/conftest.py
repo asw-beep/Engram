@@ -62,7 +62,7 @@ def settings(tmp_path):
     return Settings(
         _env_file=None,
         retry_wait_seconds=0,
-        evidence_min_score=0.30,
+        dense_min_score=0.30,
         download_dir=str(tmp_path / "downloads"),
     )
 

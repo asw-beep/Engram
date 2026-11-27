@@ -1,7 +1,7 @@
 import logging
 import threading
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -10,6 +10,7 @@ from app.api import health, jobs, questions, sources
 from app.config import Settings, get_settings
 from app.embedding.base import Embedder
 from app.ingestion.jobs import mark_interrupted_jobs
+from app.retrieval.rerank import Reranker
 from app.services import Services, build_services
 
 logger = logging.getLogger(__name__)
@@ -38,7 +39,10 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
             logger.warning("Could not prepare the keyword index at startup", exc_info=True)
         if settings.preload_embedding_model:
             threading.Thread(
-                target=_load_model, args=(services.embedder,), name="model-load", daemon=True
+                target=_load_models,
+                args=(services.embedder, services.reranker),
+                name="model-load",
+                daemon=True,
             ).start()
         yield
 
@@ -52,12 +56,19 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     return app
 
 
-def _load_model(embedder: Embedder) -> None:
-    """Embed one query, which loads the model. A failure leaves the first request to retry."""
+def _load_models(embedder: Embedder, reranker: Reranker | None) -> None:
+    """Embed one query and rerank one pair, which loads the models. A failure leaves the
+    first request to retry."""
+    _load("embedding model", lambda: embedder.embed_query("load"))
+    if reranker is not None:
+        _load("reranker", lambda: reranker.score("load", ["load"]))
+
+
+def _load(name: str, use: Callable[[], object]) -> None:
     started = time.monotonic()
     try:
-        embedder.embed_query("load")
+        use()
     except Exception:
-        logger.warning("Could not load the embedding model at startup", exc_info=True)
+        logger.warning("Could not load the %s at startup", name, exc_info=True)
         return
-    logger.info("Embedding model loaded in %.1f s", time.monotonic() - started)
+    logger.info("Loaded the %s in %.1f s", name, time.monotonic() - started)

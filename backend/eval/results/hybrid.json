@@ -1,18 +1,22 @@
 {
   "config": "hybrid",
-  "created_at": "2026-11-27T05:43:06+00:00",
+  "created_at": "2026-11-27T10:19:13+00:00",
   "questions_file": "eval/questions.jsonl",
   "settings": {
     "retrieval_mode": "hybrid",
+    "rerank_enabled": false,
     "candidate_limit": 50,
     "rrf_k": 60,
     "retrieval_limit": 30,
     "max_passages": 8,
     "max_context_tokens": 4000,
-    "evidence_min_score": 0.5,
+    "dense_min_score": 0.5,
+    "rerank_min_score": 0.5,
     "embedding_model_id": "BAAI/bge-m3",
     "embedding_device": "cuda",
     "embedding_model_revision": "5617a9f61b028005a4858fdac845db406aefb181",
+    "reranker_model_id": "BAAI/bge-reranker-v2-m3",
+    "reranker_model_revision": "953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e",
     "qdrant_collection": "chunks_bge_m3_v1",
     "opensearch_index": "chunks_v1"
   },
@@ -249,7 +253,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 115,
+      "latency_ms": 45,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/statefulset.md"
@@ -490,7 +494,7 @@
         }
       ],
       "top_score": 0.03047794966520434,
-      "latency_ms": 58,
+      "latency_ms": 69,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/statefulset.md"
@@ -732,7 +736,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 119,
+      "latency_ms": 56,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/deployment.md"
@@ -973,7 +977,7 @@
         }
       ],
       "top_score": 0.03200204813108039,
-      "latency_ms": 76,
+      "latency_ms": 37,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/deployment.md"
@@ -1214,7 +1218,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 58,
+      "latency_ms": 70,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/deployment.md"
@@ -1445,7 +1449,7 @@
         }
       ],
       "top_score": 0.032266458495966696,
-      "latency_ms": 63,
+      "latency_ms": 116,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/daemonset.md"
@@ -1679,7 +1683,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 41,
+      "latency_ms": 30,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/job.md"
@@ -1914,7 +1918,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 31,
+      "latency_ms": 41,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/job.md"
@@ -2389,7 +2393,7 @@
         }
       ],
       "top_score": 0.027263007840342125,
-      "latency_ms": 64,
+      "latency_ms": 63,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/pods/pod-lifecycle.md"
@@ -2611,7 +2615,7 @@
         }
       ],
       "top_score": 0.032018442622950824,
-      "latency_ms": 30,
+      "latency_ms": 81,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/pods/pod-lifecycle.md"
@@ -2853,7 +2857,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 57,
+      "latency_ms": 45,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/pods/init-containers.md"
@@ -3106,7 +3110,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 50,
+      "latency_ms": 47,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/pods/sidecar-containers.md"
@@ -3334,7 +3338,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 69,
+      "latency_ms": 43,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/pods/_index.md"
@@ -3567,7 +3571,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 34,
+      "latency_ms": 56,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/pods/static-pods.md"
@@ -3795,7 +3799,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 80,
+      "latency_ms": 86,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/pods/disruptions.md"
@@ -4023,7 +4027,7 @@
         }
       ],
       "top_score": 0.032266458495966696,
-      "latency_ms": 63,
+      "latency_ms": 82,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/autoscaling/horizontal-pod-autoscale.md"
@@ -4253,7 +4257,7 @@
         }
       ],
       "top_score": 0.03200204813108039,
-      "latency_ms": 34,
+      "latency_ms": 95,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/pods/pod-qos.md"
@@ -4473,7 +4477,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 52,
+      "latency_ms": 72,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/services-networking/network-policies.md"
@@ -4707,7 +4711,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 64,
+      "latency_ms": 49,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/services-networking/network-policies.md"
@@ -4948,7 +4952,7 @@
         }
       ],
       "top_score": 0.031099324975891997,
-      "latency_ms": 56,
+      "latency_ms": 52,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/services-networking/service.md"
@@ -5191,7 +5195,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 49,
+      "latency_ms": 58,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/services-networking/service.md"
@@ -5426,7 +5430,7 @@
         }
       ],
       "top_score": 0.032018442622950824,
-      "latency_ms": 40,
+      "latency_ms": 36,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/services-networking/ingress.md"
@@ -5651,7 +5655,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 27,
+      "latency_ms": 36,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/services-networking/gateway.md"
@@ -5879,7 +5883,7 @@
         }
       ],
       "top_score": 0.029051670471052088,
-      "latency_ms": 42,
+      "latency_ms": 57,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/services-networking/service.md"
@@ -6103,7 +6107,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 59,
+      "latency_ms": 75,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/services-networking/topology-aware-routing.md"
@@ -6344,7 +6348,7 @@
         }
       ],
       "top_score": 0.03177805800756621,
-      "latency_ms": 86,
+      "latency_ms": 116,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/storage/persistent-volumes.md"
@@ -6589,7 +6593,7 @@
         }
       ],
       "top_score": 0.03177805800756621,
-      "latency_ms": 72,
+      "latency_ms": 91,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/storage/persistent-volumes.md"
@@ -6829,7 +6833,7 @@
         }
       ],
       "top_score": 0.03007688828584351,
-      "latency_ms": 33,
+      "latency_ms": 56,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/storage/persistent-volumes.md"
@@ -7060,7 +7064,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 63,
+      "latency_ms": 78,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/storage/dynamic-provisioning.md"
@@ -7304,7 +7308,7 @@
         }
       ],
       "top_score": 0.032266458495966696,
-      "latency_ms": 69,
+      "latency_ms": 55,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/storage/volumes.md"
@@ -7544,7 +7548,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 49,
+      "latency_ms": 71,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/storage/volumes.md"
@@ -7772,7 +7776,7 @@
         }
       ],
       "top_score": 0.031024531024531024,
-      "latency_ms": 72,
+      "latency_ms": 150,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/configuration/configmap.md"
@@ -8009,7 +8013,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 119,
+      "latency_ms": 72,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/security/secrets-good-practices.md"
@@ -8225,7 +8229,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 57,
+      "latency_ms": 103,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/configuration/manage-resources-containers.md"
@@ -8462,7 +8466,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 45,
+      "latency_ms": 73,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/configuration/manage-resources-containers.md"
@@ -8695,7 +8699,7 @@
         }
       ],
       "top_score": 0.03200204813108039,
-      "latency_ms": 43,
+      "latency_ms": 89,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/policy/resource-quotas.md"
@@ -8933,7 +8937,7 @@
         }
       ],
       "top_score": 0.03200204813108039,
-      "latency_ms": 77,
+      "latency_ms": 58,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/security/pod-security-standards.md"
@@ -9173,7 +9177,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 69,
+      "latency_ms": 82,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/security/rbac-good-practices.md"
@@ -9406,7 +9410,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 60,
+      "latency_ms": 47,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/security/service-accounts.md"
@@ -9644,7 +9648,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 55,
+      "latency_ms": 47,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/security/multi-tenancy.md"
@@ -10108,7 +10112,7 @@
         }
       ],
       "top_score": 0.025503573749187783,
-      "latency_ms": 55,
+      "latency_ms": 30,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/scheduling-eviction/assign-pod-node.md"
@@ -10369,7 +10373,7 @@
         }
       ],
       "top_score": 0.03149801587301587,
-      "latency_ms": 49,
+      "latency_ms": 29,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/scheduling-eviction/topology-spread-constraints.md"
@@ -10607,7 +10611,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 31,
+      "latency_ms": 32,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/scheduling-eviction/pod-priority-preemption.md"
@@ -10840,7 +10844,7 @@
         }
       ],
       "top_score": 0.032266458495966696,
-      "latency_ms": 59,
+      "latency_ms": 33,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/scheduling-eviction/node-pressure-eviction.md"
@@ -11071,7 +11075,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 81,
+      "latency_ms": 29,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/architecture/control-plane-node-communication.md"
@@ -11292,7 +11296,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 54,
+      "latency_ms": 33,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/architecture/controller.md"
@@ -11533,7 +11537,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 48,
+      "latency_ms": 27,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/architecture/nodes.md"
@@ -11766,7 +11770,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 96,
+      "latency_ms": 49,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/architecture/garbage-collection.md"
@@ -12013,7 +12017,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 55,
+      "latency_ms": 38,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/architecture/garbage-collection.md"
@@ -12245,7 +12249,7 @@
         }
       ],
       "top_score": 0.03177805800756621,
-      "latency_ms": 61,
+      "latency_ms": 50,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/overview/working-with-objects/namespaces.md"
@@ -12493,7 +12497,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 53,
+      "latency_ms": 26,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/overview/working-with-objects/labels.md"
@@ -12727,7 +12731,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 72,
+      "latency_ms": 53,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/overview/working-with-objects/finalizers.md"
@@ -12963,7 +12967,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 98,
+      "latency_ms": 76,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/cluster-administration/flow-control.md"
@@ -13195,7 +13199,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 69,
+      "latency_ms": 49,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/containers/container-lifecycle-hooks.md"
@@ -13405,7 +13409,7 @@
         }
       ],
       "top_score": 0.032018442622950824,
-      "latency_ms": 36,
+      "latency_ms": 55,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/extend-kubernetes/operator.md"
@@ -13638,7 +13642,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 81,
+      "latency_ms": 63,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/extend-kubernetes/api-extension/custom-resources.md"
@@ -13876,7 +13880,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 98,
+      "latency_ms": 47,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/cluster-administration/node-shutdown.md"
@@ -14111,7 +14115,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 53,
+      "latency_ms": 44,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/cluster-administration/logging.md"
@@ -14333,7 +14337,7 @@
         }
       ],
       "top_score": 0.03047794966520434,
-      "latency_ms": 35,
+      "latency_ms": 40,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/overview/kubernetes-api.md"
@@ -14565,7 +14569,7 @@
         }
       ],
       "top_score": 0.032266458495966696,
-      "latency_ms": 35,
+      "latency_ms": 40,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/pods/downward-api.md"
@@ -14805,7 +14809,7 @@
         }
       ],
       "top_score": 0.030886196246139225,
-      "latency_ms": 36,
+      "latency_ms": 34,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/deployment.md"
@@ -15048,7 +15052,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 56,
+      "latency_ms": 52,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/deployment.md"
@@ -15297,7 +15301,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 70,
+      "latency_ms": 44,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/deployment.md"
@@ -15537,7 +15541,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 78,
+      "latency_ms": 63,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/cron-jobs.md"
@@ -15773,7 +15777,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 91,
+      "latency_ms": 86,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/cron-jobs.md"
@@ -16014,7 +16018,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 61,
+      "latency_ms": 75,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/job.md"
@@ -16254,7 +16258,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 52,
+      "latency_ms": 36,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/statefulset.md"
@@ -16492,7 +16496,7 @@
         }
       ],
       "top_score": 0.032018442622950824,
-      "latency_ms": 58,
+      "latency_ms": 37,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/statefulset.md"
@@ -16724,7 +16728,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 30,
+      "latency_ms": 44,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/statefulset.md"
@@ -16961,7 +16965,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 79,
+      "latency_ms": 58,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/pods/probes.md"
@@ -17204,7 +17208,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 89,
+      "latency_ms": 49,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/containers/images.md"
@@ -17452,7 +17456,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 112,
+      "latency_ms": 82,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/containers/images.md"
@@ -17692,7 +17696,7 @@
         }
       ],
       "top_score": 0.032018442622950824,
-      "latency_ms": 34,
+      "latency_ms": 37,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/services-networking/service.md"
@@ -17931,7 +17935,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 30,
+      "latency_ms": 41,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/services-networking/ingress.md"
@@ -18167,7 +18171,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 66,
+      "latency_ms": 31,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/services-networking/ingress.md"
@@ -18409,7 +18413,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 58,
+      "latency_ms": 31,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/services-networking/dns-pod-service.md"
@@ -18649,7 +18653,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 33,
+      "latency_ms": 30,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/storage/persistent-volumes.md"
@@ -18886,7 +18890,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 39,
+      "latency_ms": 59,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/storage/storage-classes.md"
@@ -19124,7 +19128,7 @@
         }
       ],
       "top_score": 0.03177805800756621,
-      "latency_ms": 36,
+      "latency_ms": 69,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/storage/volumes.md"
@@ -19354,7 +19358,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 28,
+      "latency_ms": 30,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/storage/volumes.md"
@@ -19593,7 +19597,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 35,
+      "latency_ms": 37,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/configuration/secret.md"
@@ -19835,7 +19839,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 27,
+      "latency_ms": 50,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/configuration/secret.md"
@@ -20086,7 +20090,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 58,
+      "latency_ms": 28,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/configuration/manage-resources-containers.md"
@@ -20317,7 +20321,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 50,
+      "latency_ms": 28,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/security/pod-security-admission.md"
@@ -20546,7 +20550,7 @@
         }
       ],
       "top_score": 0.031754032258064516,
-      "latency_ms": 75,
+      "latency_ms": 45,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/scheduling-eviction/taint-and-toleration.md"
@@ -20792,7 +20796,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 52,
+      "latency_ms": 40,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/scheduling-eviction/topology-spread-constraints.md"
@@ -21032,7 +21036,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 32,
+      "latency_ms": 56,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/scheduling-eviction/pod-priority-preemption.md"
@@ -21282,7 +21286,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 73,
+      "latency_ms": 35,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/scheduling-eviction/node-pressure-eviction.md"
@@ -21521,7 +21525,7 @@
         }
       ],
       "top_score": 0.032018442622950824,
-      "latency_ms": 62,
+      "latency_ms": 48,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/overview/working-with-objects/field-selectors.md"
@@ -21743,7 +21747,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 56,
+      "latency_ms": 45,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/scheduling-eviction/pod-scheduling-readiness.md"
@@ -21971,7 +21975,7 @@
         }
       ],
       "top_score": 0.031099324975891997,
-      "latency_ms": 49,
+      "latency_ms": 59,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/autoscaling/horizontal-pod-autoscale.md"
@@ -22199,7 +22203,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 30,
+      "latency_ms": 63,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/autoscaling/vertical-pod-autoscale.md"
@@ -22437,7 +22441,7 @@
         }
       ],
       "top_score": 0.031099324975891997,
-      "latency_ms": 59,
+      "latency_ms": 34,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/pods/user-namespaces.md"
@@ -22660,7 +22664,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 69,
+      "latency_ms": 27,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/cluster-administration/node-shutdown.md"
@@ -22904,7 +22908,7 @@
         }
       ],
       "top_score": 0.032018442622950824,
-      "latency_ms": 156,
+      "latency_ms": 28,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/services-networking/dual-stack.md"
@@ -23133,7 +23137,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 77,
+      "latency_ms": 49,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/services-networking/topology-aware-routing.md"
@@ -23369,7 +23373,7 @@
         }
       ],
       "top_score": 0.030621785881252923,
-      "latency_ms": 33,
+      "latency_ms": 59,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/policy/resource-quotas.md"
@@ -23601,7 +23605,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 55,
+      "latency_ms": 65,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/configuration/configmap.md"
@@ -23849,7 +23853,7 @@
         }
       ],
       "top_score": 0.03200204813108039,
-      "latency_ms": 64,
+      "latency_ms": 31,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/pods/pod-lifecycle.md"
@@ -24098,7 +24102,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 82,
+      "latency_ms": 28,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/storage/persistent-volumes.md"
@@ -24337,7 +24341,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 36,
+      "latency_ms": 59,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/pods/probes.md"
@@ -24579,7 +24583,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 32,
+      "latency_ms": 113,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/deployment.md"
@@ -24816,7 +24820,7 @@
         }
       ],
       "top_score": 0.031544957774465976,
-      "latency_ms": 45,
+      "latency_ms": 59,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/configuration/configmap.md",
@@ -25072,7 +25076,7 @@
         }
       ],
       "top_score": 0.031746031746031744,
-      "latency_ms": 57,
+      "latency_ms": 37,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/scheduling-eviction/assign-pod-node.md",
@@ -25299,7 +25303,7 @@
         }
       ],
       "top_score": 0.03225806451612903,
-      "latency_ms": 70,
+      "latency_ms": 38,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/policy/limit-range.md",
@@ -25533,7 +25537,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 90,
+      "latency_ms": 43,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/scheduling-eviction/pod-priority-preemption.md",
@@ -25775,7 +25779,7 @@
         }
       ],
       "top_score": 0.032266458495966696,
-      "latency_ms": 41,
+      "latency_ms": 39,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/scheduling-eviction/api-eviction.md",
@@ -26032,7 +26036,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 76,
+      "latency_ms": 24,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/pods/init-containers.md",
@@ -26263,7 +26267,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 79,
+      "latency_ms": 25,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/services-networking/cluster-ip-allocation.md",
@@ -26496,7 +26500,7 @@
         }
       ],
       "top_score": 0.032266458495966696,
-      "latency_ms": 105,
+      "latency_ms": 64,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/services-networking/gateway.md",
@@ -26733,7 +26737,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 57,
+      "latency_ms": 94,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/security/pod-security-admission.md",
@@ -26979,7 +26983,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 55,
+      "latency_ms": 38,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/job.md"
@@ -27203,7 +27207,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 51,
+      "latency_ms": 68,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/architecture/garbage-collection.md",
@@ -27444,7 +27448,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 36,
+      "latency_ms": 86,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/storage/ephemeral-volumes.md",
@@ -27686,7 +27690,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 30,
+      "latency_ms": 52,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/cron-jobs.md"
@@ -27915,7 +27919,7 @@
         }
       ],
       "top_score": 0.03278688524590164,
-      "latency_ms": 33,
+      "latency_ms": 30,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/services-networking/network-policies.md"
@@ -28142,7 +28146,7 @@
         }
       ],
       "top_score": 0.03200204813108039,
-      "latency_ms": 34,
+      "latency_ms": 37,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/configuration/organize-cluster-access-kubeconfig.md"
@@ -28376,7 +28380,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 45,
+      "latency_ms": 27,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/statefulset.md"
@@ -28598,7 +28602,7 @@
         }
       ],
       "top_score": 0.030834914611005692,
-      "latency_ms": 72,
+      "latency_ms": 29,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/overview/working-with-objects/annotations.md",
@@ -28835,7 +28839,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 79,
+      "latency_ms": 45,
       "mode": "hybrid",
       "outside": [
         "content/en/docs/concepts/workloads/controllers/deployment.md"
@@ -29071,7 +29075,7 @@
         }
       ],
       "top_score": 0.028177225029148854,
-      "latency_ms": 58,
+      "latency_ms": 26,
       "mode": "hybrid",
       "outside": []
     },
@@ -29299,7 +29303,7 @@
         }
       ],
       "top_score": 0.032018442622950824,
-      "latency_ms": 60,
+      "latency_ms": 29,
       "mode": "hybrid",
       "outside": []
     },
@@ -29520,7 +29524,7 @@
         }
       ],
       "top_score": 0.026234567901234566,
-      "latency_ms": 85,
+      "latency_ms": 54,
       "mode": "hybrid",
       "outside": []
     },
@@ -29749,7 +29753,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 68,
+      "latency_ms": 30,
       "mode": "hybrid",
       "outside": []
     },
@@ -29992,7 +29996,7 @@
         }
       ],
       "top_score": 0.025052505250525055,
-      "latency_ms": 79,
+      "latency_ms": 25,
       "mode": "hybrid",
       "outside": []
     },
@@ -30218,7 +30222,7 @@
         }
       ],
       "top_score": 0.03225806451612903,
-      "latency_ms": 59,
+      "latency_ms": 55,
       "mode": "hybrid",
       "outside": []
     },
@@ -30448,7 +30452,7 @@
         }
       ],
       "top_score": 0.02844163539403516,
-      "latency_ms": 60,
+      "latency_ms": 44,
       "mode": "hybrid",
       "outside": []
     },
@@ -30683,7 +30687,7 @@
         }
       ],
       "top_score": 0.03131881575727918,
-      "latency_ms": 105,
+      "latency_ms": 28,
       "mode": "hybrid",
       "outside": []
     },
@@ -30903,7 +30907,7 @@
         }
       ],
       "top_score": 0.02488425925925926,
-      "latency_ms": 58,
+      "latency_ms": 38,
       "mode": "hybrid",
       "outside": []
     },
@@ -31132,7 +31136,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 44,
+      "latency_ms": 62,
       "mode": "hybrid",
       "outside": []
     },
@@ -31356,7 +31360,7 @@
         }
       ],
       "top_score": 0.02507351803126451,
-      "latency_ms": 31,
+      "latency_ms": 98,
       "mode": "hybrid",
       "outside": []
     },
@@ -31566,7 +31570,7 @@
         }
       ],
       "top_score": 0.029910714285714284,
-      "latency_ms": 53,
+      "latency_ms": 85,
       "mode": "hybrid",
       "outside": []
     },
@@ -31785,7 +31789,7 @@
         }
       ],
       "top_score": 0.027205882352941177,
-      "latency_ms": 31,
+      "latency_ms": 33,
       "mode": "hybrid",
       "outside": []
     },
@@ -31995,7 +31999,7 @@
         }
       ],
       "top_score": 0.025739237015474183,
-      "latency_ms": 51,
+      "latency_ms": 26,
       "mode": "hybrid",
       "outside": []
     },
@@ -32234,7 +32238,7 @@
         }
       ],
       "top_score": 0.028665028665028666,
-      "latency_ms": 82,
+      "latency_ms": 53,
       "mode": "hybrid",
       "outside": []
     },
@@ -32450,7 +32454,7 @@
         }
       ],
       "top_score": 0.03225806451612903,
-      "latency_ms": 47,
+      "latency_ms": 52,
       "mode": "hybrid",
       "outside": []
     },
@@ -32683,7 +32687,7 @@
         }
       ],
       "top_score": 0.01639344262295082,
-      "latency_ms": 36,
+      "latency_ms": 30,
       "mode": "hybrid",
       "outside": []
     },
@@ -32910,7 +32914,7 @@
         }
       ],
       "top_score": 0.03252247488101534,
-      "latency_ms": 37,
+      "latency_ms": 65,
       "mode": "hybrid",
       "outside": []
     },
@@ -33140,7 +33144,7 @@
         }
       ],
       "top_score": 0.029513888888888888,
-      "latency_ms": 59,
+      "latency_ms": 80,
       "mode": "hybrid",
       "outside": []
     },
@@ -33369,7 +33373,7 @@
         }
       ],
       "top_score": 0.03225806451612903,
-      "latency_ms": 36,
+      "latency_ms": 48,
       "mode": "hybrid",
       "outside": []
     }
@@ -33409,8 +33413,8 @@
       }
     },
     "latency_ms": {
-      "median": 57,
-      "p95": 98
+      "median": 47,
+      "p95": 86
     },
     "evidence_gate": null
   }

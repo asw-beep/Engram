@@ -7,7 +7,7 @@ from opensearchpy import OpenSearch
 
 from app.db.keyword_index import KeywordIndex
 from app.main import create_app
-from tests.fakes import FakeEmbedder
+from tests.fakes import FakeEmbedder, FakeReranker
 
 
 class WatchedEmbedder(FakeEmbedder):
@@ -49,6 +49,38 @@ def test_a_failed_model_load_at_startup_does_not_stop_the_app(settings, services
     with TestClient(app) as client:
         assert embedder.loaded.wait(timeout=5)
         assert client.get("/api/health").status_code == 200
+
+
+class WatchedReranker(FakeReranker):
+    """Records whether anything asked for scores, which loads the real model."""
+
+    def __init__(self):
+        super().__init__()
+        self.loaded = threading.Event()
+
+    def score(self, query: str, passages: list[str]) -> list[float]:
+        self.loaded.set()
+        return super().score(query, passages)
+
+
+def test_the_reranker_is_loaded_at_startup_too(settings, services):
+    reranker = WatchedReranker()
+    app = create_app(
+        settings.model_copy(update={"preload_embedding_model": True}),
+        replace(services, embedder=WatchedEmbedder(), reranker=reranker),
+    )
+    with TestClient(app):
+        assert reranker.loaded.wait(timeout=5)
+
+
+def test_a_failed_embedding_model_load_still_loads_the_reranker(settings, services):
+    reranker = WatchedReranker()
+    app = create_app(
+        settings.model_copy(update={"preload_embedding_model": True}),
+        replace(services, embedder=WatchedEmbedder(OSError("no model files")), reranker=reranker),
+    )
+    with TestClient(app):
+        assert reranker.loaded.wait(timeout=5)
 
 
 def test_startup_creates_a_missing_keyword_index(settings, services, opensearch_client):

@@ -4,7 +4,15 @@ import pytest
 
 from eval.dataset import Gold, Question
 from eval.report import render
-from eval.run import gate_cutoff, require_mode, run_questions, summarise
+from eval.run import (
+    CONFIGS,
+    configure,
+    cutoff_source,
+    gate_cutoff,
+    require_mode,
+    run_questions,
+    summarise,
+)
 from tests.tenants import DEFAULT_SCOPE
 
 
@@ -153,11 +161,39 @@ def test_unreranked_hybrid_scores_get_no_evidence_gate():
     assert summarise(PER_QUESTION, QUESTIONS, cutoff=None)["evidence_gate"] is None
 
 
-def test_the_gate_cutoff_is_missing_only_for_unreranked_hybrid(settings):
-    dense = settings.model_copy(update={"retrieval_mode": "dense"})
-    hybrid = settings.model_copy(update={"retrieval_mode": "hybrid"})
-    assert gate_cutoff(dense) == settings.evidence_min_score
-    assert gate_cutoff(hybrid) is None
+@pytest.mark.parametrize(
+    ("config", "cutoff"),
+    [
+        ("dense", "dense_min_score"),
+        ("hybrid", None),
+        ("dense_rerank", "rerank_min_score"),
+        ("hybrid_rerank", "rerank_min_score"),
+    ],
+)
+def test_each_configuration_is_gated_at_its_own_cutoff(settings, config, cutoff):
+    settings = settings.model_copy(update={"dense_min_score": 0.4, "rerank_min_score": 0.7})
+    expected = None if cutoff is None else getattr(settings, cutoff)
+    assert gate_cutoff(configure(settings, config)) == expected
+
+
+def test_the_configurations_cover_both_retrievers_with_and_without_reranking():
+    assert {(c["retrieval_mode"], c["rerank_enabled"]) for c in CONFIGS.values()} == {
+        ("dense", False),
+        ("hybrid", False),
+        ("dense", True),
+        ("hybrid", True),
+    }
+
+
+def test_a_cutoff_is_called_calibrated_only_when_it_is_the_calibrated_value():
+    calibration = {"hybrid_rerank": {"cutoff": 0.62}}
+    assert cutoff_source(0.62, "hybrid_rerank", calibration) == "calibrated on dev"
+    assert cutoff_source(0.62, "dense_rerank", calibration) == (
+        "calibrated on dev for hybrid_rerank"
+    )
+    assert cutoff_source(0.5, "hybrid_rerank", calibration) == "configured"
+    assert cutoff_source(0.5, "dense", {}) == "configured"
+    assert cutoff_source(None, "hybrid", calibration) == "not applicable"
 
 
 def test_a_run_that_fell_back_to_dense_is_not_saved_as_hybrid():
@@ -174,3 +210,33 @@ def test_the_report_marks_the_unreranked_hybrid_gate_not_applicable():
     text = render({"dense": _result(), "hybrid": hybrid}, QUESTIONS, reviewed=False)
     assert "| hybrid | – | not applicable | – | – | – |" in text
     assert "RRF" in text
+
+
+def test_the_report_states_the_calibration_rule_and_its_accuracy_on_dev_and_test():
+    reranked = _result(cutoff_from="calibrated on dev")
+    reranked["config"] = "hybrid_rerank"
+    calibration = {
+        "hybrid_rerank": {
+            "cutoff": 0.5,
+            "rule": "the midpoint that maximises balanced accuracy on dev",
+            "dev": {
+                "answerable": 49,
+                "unanswerable": 8,
+                "answerable_passed": 48 / 49,
+                "unanswerable_refused": 7 / 8,
+                "balanced_accuracy": (48 / 49 + 7 / 8) / 2,
+            },
+        }
+    }
+    text = render({"hybrid_rerank": reranked}, QUESTIONS, False, calibration=calibration)
+    assert "the midpoint that maximises balanced accuracy on dev" in text
+    assert "0.927 on `dev`" in text
+    test_accuracy = reranked["summary"]["evidence_gate"]["balanced_accuracy"]
+    assert f"{test_accuracy:.3f} on `test`" in text
+    assert "| dense_rerank | not run |" in text
+
+
+def test_the_report_names_both_cutoff_settings():
+    text = render({"dense": _result()}, QUESTIONS, reviewed=False)
+    assert "`dense_min_score`" in text and "`rerank_min_score`" in text
+    assert "evidence_min_score" not in text

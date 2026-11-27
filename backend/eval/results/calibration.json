@@ -1,0 +1,26 @@
+{
+  "hybrid_rerank": {
+    "cutoff": 0.74,
+    "rule": "the threshold, midway between two adjacent `dev` top scores, that maximises balanced accuracy between answerable and unanswerable `dev` questions, each judged by its highest passage score; a tie goes to the higher threshold",
+    "dev": {
+      "answerable": 49,
+      "unanswerable": 8,
+      "answerable_passed": 1.0,
+      "unanswerable_refused": 1.0,
+      "balanced_accuracy": 1.0
+    },
+    "result_created_at": "2026-11-27T10:15:49+00:00"
+  },
+  "dense_rerank": {
+    "cutoff": 0.74,
+    "rule": "the threshold, midway between two adjacent `dev` top scores, that maximises balanced accuracy between answerable and unanswerable `dev` questions, each judged by its highest passage score; a tie goes to the higher threshold",
+    "dev": {
+      "answerable": 49,
+      "unanswerable": 8,
+      "answerable_passed": 1.0,
+      "unanswerable_refused": 1.0,
+      "balanced_accuracy": 1.0
+    },
+    "result_created_at": "2026-11-27T10:18:23+00:00"
+  }
+}

@@ -25,6 +25,7 @@ from app.retrieval.base import Retriever
 from app.retrieval.dense import DenseRetriever
 from app.retrieval.hybrid import HybridRetriever
 from app.retrieval.keyword import KeywordRetriever
+from app.retrieval.rerank import BgeReranker
 from app.storage.files import FileStore
 
 
@@ -32,6 +33,7 @@ from app.storage.files import FileStore
 class Services(IngestionDeps):
     llm: Any = None
     retriever: Any = None
+    reranker: Any = None
 
 
 def make_connector_for(
@@ -87,6 +89,7 @@ def build_services(settings: Settings) -> Services:
         connector_for=make_connector_for(file_store, httpx.Client(timeout=30.0), settings),
         settings=settings,
         retriever=_retriever(settings, DenseRetriever(embedder, index), keyword_index),
+        reranker=BgeReranker(settings) if settings.rerank_enabled else None,
         llm=ResilientLLM(
             primary=provider(settings.llm_model, structured=True),
             fallback=provider(settings.llm_fallback_model, structured=False),

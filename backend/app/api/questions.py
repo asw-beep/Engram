@@ -22,6 +22,7 @@ def ask_question(body: QuestionIn, services: ServicesDep, session: SessionDep, s
             services.llm,
             services.embedder.count_tokens,
             services.settings,
+            reranker=services.reranker,
         )
     except RetrievalUnavailable:
         raise HTTPException(503, "Search is unavailable right now. Try again shortly.") from None

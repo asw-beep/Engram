@@ -24,6 +24,7 @@ from app.generation.context import select_passages
 from app.generation.prompts import build_messages
 from app.retrieval.base import Retriever
 from app.retrieval.pipeline import retrieve_passages
+from app.retrieval.rerank import Reranker
 from app.types import AccessScope, Passage, RetrievalOutcome
 
 logger = logging.getLogger(__name__)
@@ -50,6 +51,7 @@ def answer_question(
     llm: LLMProvider,
     count_tokens: Callable[[str], int],
     settings: Settings,
+    reranker: Reranker | None = None,
 ) -> QuestionResult:
     started = time.perf_counter()
     retrieval: RetrievalOutcome | None = None
@@ -85,16 +87,16 @@ def answer_question(
         return QuestionResult(entry.id, outcome, answer, citations or [], passages or [])
 
     try:
-        retrieval = retrieve_passages(session, question, scope, retriever, settings)
+        retrieval = retrieve_passages(session, question, scope, retriever, settings, reranker)
     except Exception as error:
         logger.warning("Retrieval failed, so the question can't be answered", exc_info=True)
         _rollback(session)
         finish("retrieval_unavailable", [])
         raise RetrievalUnavailable from error
 
-    strong = [
-        passage for passage in retrieval.passages if passage.score >= settings.evidence_min_score
-    ]
+    # Reranker scores and dense similarities are on different scales, so each has its cutoff.
+    cutoff = settings.rerank_min_score if retrieval.reranked else settings.dense_min_score
+    strong = [passage for passage in retrieval.passages if passage.score >= cutoff]
     context = select_passages(
         strong, count_tokens, settings.max_passages, settings.max_context_tokens
     )

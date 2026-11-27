@@ -30,7 +30,7 @@ def retrieval_only(questions: list[dict[str, str]]) -> int:
     # Imported here so the API mode doesn't need the model or the databases.
     from app.config import get_settings
     from app.db.constants import DEFAULT_TENANT_ID
-    from app.retrieval.recheck import load_passages
+    from app.retrieval.pipeline import retrieve_passages
     from app.services import build_services
     from app.types import AccessScope
 
@@ -41,8 +41,10 @@ def retrieval_only(questions: list[dict[str, str]]) -> int:
     print(f"{'top':>6}  {'expects':<22} {'top document':<24} question")
     with services.session_factory() as session:
         for item in questions:
-            hits = services.retriever.search(item["question"], scope, settings.retrieval_limit)
-            passages = load_passages(session, hits, scope)
+            outcome = retrieve_passages(
+                session, item["question"], scope, services.retriever, settings, services.reranker
+            )
+            passages = outcome.passages
             top = passages[0] if passages else None
             score = top.score if top else 0.0
             scores[item["expects"]].append(score)
@@ -57,7 +59,10 @@ def retrieval_only(questions: list[dict[str, str]]) -> int:
         print(f"midpoint cutoff: {(lowest_answerable + highest_unrelated) / 2:.3f}")
     else:
         print("the ranges overlap, so no cutoff separates them")
-    print(f"current evidence_min_score: {settings.evidence_min_score:.3f}")
+    if settings.rerank_enabled:
+        print(f"current rerank_min_score: {settings.rerank_min_score:.3f}")
+    else:
+        print(f"current dense_min_score: {settings.dense_min_score:.3f}")
     return 0
 
 

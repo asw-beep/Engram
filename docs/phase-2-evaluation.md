@@ -23,21 +23,23 @@ The corpus held 186 current documents and 2533 chunks when the first listed run 
 |---|---:|---:|---:|---:|
 | dense | 0.890 | 0.945 | 0.807 | 0.849 |
 | hybrid | 0.836 | 0.877 | 0.763 | 0.793 |
-| hybrid_rerank | not run | – | – | – |
+| dense_rerank | 0.849 | 0.945 | 0.817 | 0.865 |
+| hybrid_rerank | 0.890 | 0.973 | 0.824 | 0.872 |
 
 - `dense`: BGE-M3 vectors in Qdrant
 - `hybrid`: dense and BM25 (OpenSearch), fused with RRF
+- `dense_rerank`: dense, then BGE-reranker-v2-m3
 - `hybrid_rerank`: hybrid, then BGE-reranker-v2-m3
 
 A chunk is relevant when it comes from a gold document and its heading path starts with a gold section's. Recall@K counts a question only when every gold section has a chunk in the top K, so a `multi_section` question needs both. NDCG is graded: the first chunk from each gold section earns 2 and the first chunk from elsewhere in a gold document earns 1, so a ranking holding only the gold sections scores below 1 when the rest of a gold document could also have been found.
 
 ## By question kind (test split, Recall@5 / MRR@10)
 
-| Kind | Questions | dense | hybrid | hybrid_rerank |
-|---|---:|---|---|---|
-| conceptual | 37 | 0.946 / 0.759 | 0.865 / 0.677 | not run |
-| exact_term | 24 | 0.917 / 0.902 | 0.958 / 0.865 | not run |
-| multi_section | 12 | 0.667 / 0.764 | 0.500 / 0.819 | not run |
+| Kind | Questions | dense | hybrid | dense_rerank | hybrid_rerank |
+|---|---:|---|---|---|---|
+| conceptual | 37 | 0.946 / 0.759 | 0.865 / 0.677 | 0.946 / 0.792 | 0.946 / 0.795 |
+| exact_term | 24 | 0.917 / 0.902 | 0.958 / 0.865 | 0.958 / 0.931 | 1.000 / 0.939 |
+| multi_section | 12 | 0.667 / 0.764 | 0.500 / 0.819 | 0.333 / 0.669 | 0.500 / 0.683 |
 
 ## Evidence gate (test split)
 
@@ -45,25 +47,31 @@ A chunk is relevant when it comes from a gold document and its heading path star
 |---|---:|---|---:|---:|---:|
 | dense | 0.500 | configured | 1.000 | 0.500 | 0.750 |
 | hybrid | – | not applicable | – | – | – |
-| hybrid_rerank | not run | – | – | – | – |
+| dense_rerank | 0.740 | calibrated on dev | 0.986 | 1.000 | 0.993 |
+| hybrid_rerank | 0.740 | calibrated on dev | 0.986 | 1.000 | 0.993 |
 
-A question passes when its highest passage score is at or above the cutoff, the rule `answer_question` applies. This is the score gate only: the API also refuses when every passage above the cutoff is too large for the context budget, which the harness doesn't model. Balanced accuracy is the mean of the two shares. A `configured` cutoff is the `evidence_min_score` setting, not tuned on this dataset; a calibrated one was chosen on the `dev` split only. Unreranked `hybrid` has no gate: its scores are RRF values, which rank passages but aren't comparable to a cutoff.
+A question passes when its highest passage score is at or above the cutoff, the rule `answer_question` applies. This is the score gate only: the API also refuses when every passage above the cutoff is too large for the context budget, which the harness doesn't model. Balanced accuracy is the mean of the two shares. A `configured` cutoff is taken from the settings as given, not tuned on this dataset: `dense_min_score` for dense similarities and `rerank_min_score` for reranker scores. A calibrated one was chosen on the `dev` split only. Unreranked `hybrid` has no gate: its scores are RRF values, which rank passages but aren't comparable to a cutoff.
+
+The calibrated cutoff for `hybrid_rerank`, 0.74, is the threshold, midway between two adjacent `dev` top scores, that maximises balanced accuracy between answerable and unanswerable `dev` questions, each judged by its highest passage score; a tie goes to the higher threshold. Its balanced accuracy is 1.000 on `dev` (49 answerable and 8 unanswerable questions) and 0.993 on `test`.
+
+The calibrated cutoff for `dense_rerank`, 0.74, is the threshold, midway between two adjacent `dev` top scores, that maximises balanced accuracy between answerable and unanswerable `dev` questions, each judged by its highest passage score; a tie goes to the higher threshold. Its balanced accuracy is 1.000 on `dev` (49 answerable and 8 unanswerable questions) and 0.993 on `test`.
 
 ## Retrieval latency (test split)
 
 | Configuration | Median (ms) | p95 (ms) | Embedding device |
 |---|---:|---:|---|
-| dense | 42 | 72 | `cuda` |
-| hybrid | 57 | 98 | `cuda` |
-| hybrid_rerank | not run | – | – |
+| dense | 49 | 88 | `cuda` |
+| hybrid | 47 | 86 | `cuda` |
+| dense_rerank | 941 | 1109 | `cuda` |
+| hybrid_rerank | 840 | 1006 | `cuda` |
 
 Retrieval only, from the question to ranked passages, with the models already loaded, on the machine that ran `eval.run`, not the production server. Generation isn't included.
 
 ## Plan.md §10.5 targets
 
-| Target | dense | hybrid | hybrid_rerank |
-|---|---|---|---|
-| Recall@5 ≥ 85% | provisional (0.890) | provisional (0.836) | not run |
+| Target | dense | hybrid | dense_rerank | hybrid_rerank |
+|---|---|---|---|---|
+| Recall@5 ≥ 85% | provisional (0.890) | provisional (0.836) | provisional (0.849) | provisional (0.890) |
 
 A target is called met or missed only once the owner has reviewed the question sample. The query latency target (p95 under 5 seconds) covers the whole answer, including generation, so this phase can't report it as met or missed: the retrieval part is in the latency table above, and end-to-end latency on the production server is measured in Phase 4. Citation validity, tenant isolation and ingestion recovery aren't measured by this harness.
 

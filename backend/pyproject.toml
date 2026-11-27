@@ -54,6 +54,9 @@ explicit = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = [
+    "slow: loads a real model from HF_HOME; skipped when the model isn't there",
+]
 
 [tool.ruff]
 line-length = 100

@@ -22,15 +22,19 @@ from app.config import Settings, get_settings
 from app.db.models import Chunk, Document
 from app.retrieval.base import Retriever
 from app.retrieval.pipeline import retrieve_passages
+from app.retrieval.rerank import Reranker
 from app.services import build_services
 from app.types import AccessScope
 from eval.dataset import KINDS, Gold, Question, load_questions
 from eval.metrics import Ranked, in_section, ndcg_at, percentile, recall_at, reciprocal_rank
 
 # The settings each configuration overrides.
+# dense_rerank separates what the reranker adds from what OpenSearch adds (Plan.md §9: a
+# technology stays only for a measurable benefit).
 CONFIGS = {
     "dense": {"retrieval_mode": "dense", "rerank_enabled": False},
     "hybrid": {"retrieval_mode": "hybrid", "rerank_enabled": False},
+    "dense_rerank": {"retrieval_mode": "dense", "rerank_enabled": True},
     "hybrid_rerank": {"retrieval_mode": "hybrid", "rerank_enabled": True},
 }
 # What the code does when a setting doesn't exist yet. A configuration that needs anything
@@ -45,7 +49,6 @@ RECORDED = (
     "retrieval_limit",
     "max_passages",
     "max_context_tokens",
-    "evidence_min_score",
     "dense_min_score",
     "rerank_min_score",
     "embedding_model_id",
@@ -72,12 +75,28 @@ def configure(settings: Settings, config: str) -> Settings:
 def gate_cutoff(settings: Settings) -> float | None:
     """The cutoff the score gate is measured at, or None when the scores can't be gated.
 
-    Unreranked hybrid scores are RRF values: they rank passages but aren't comparable to a
-    cutoff, so reporting a gate for them would describe nothing the API does.
+    Reranker scores are gated at rerank_min_score and dense similarities at dense_min_score,
+    as answer_question does. Unreranked hybrid scores are RRF values: they rank passages but
+    aren't comparable to a cutoff, so a gate for them would describe nothing the API does.
     """
-    if settings.retrieval_mode == "hybrid" and not getattr(settings, "rerank_enabled", False):
+    if settings.rerank_enabled:
+        return settings.rerank_min_score
+    if settings.retrieval_mode == "hybrid":
         return None
-    return settings.evidence_min_score
+    return settings.dense_min_score
+
+
+def cutoff_source(cutoff: float | None, config: str, calibration: dict[str, dict]) -> str:
+    """Say where the gate's cutoff came from: a calibration on dev, or the settings as given."""
+    if cutoff is None:
+        return "not applicable"
+    own = calibration.get(config)
+    if own is not None and own.get("cutoff") == cutoff:
+        return "calibrated on dev"
+    for other, entry in calibration.items():
+        if entry.get("cutoff") == cutoff:
+            return f"calibrated on dev for {other}"
+    return "configured"
 
 
 def require_mode(per_question: list[dict], mode: str) -> None:
@@ -98,10 +117,13 @@ def run_questions(
     scope: AccessScope,
     retriever: Retriever,
     settings: Settings,
+    reranker: Reranker | None = None,
 ) -> list[dict]:
     rows = []
     for question in questions:
-        outcome = retrieve_passages(session, question.question, scope, retriever, settings)
+        outcome = retrieve_passages(
+            session, question.question, scope, retriever, settings, reranker
+        )
         passages = outcome.passages
         rows.append(
             {
@@ -157,7 +179,9 @@ def summarise(per_question: list[dict], questions: list[Question], cutoff: float
             "median": statistics.median(latencies) if latencies else None,
             "p95": percentile(latencies, 95) if latencies else None,
         },
-        "evidence_gate": None if cutoff is None else _gate(answerable, unanswerable, cutoff),
+        "evidence_gate": (
+            None if cutoff is None else evidence_gate(answerable, unanswerable, cutoff)
+        ),
     }
 
 
@@ -189,7 +213,12 @@ def _outside(row: dict) -> Collection[str]:
     return set(row["outside"])
 
 
-def _gate(answerable: list, unanswerable: list, cutoff: float) -> dict:
+def evidence_gate(answerable: list, unanswerable: list, cutoff: float) -> dict:
+    """Shares of answerable questions passing and unanswerable ones refused at the cutoff.
+
+    Each entry is a (question, row) pair; a row with no passages never passes.
+    """
+
     def top(row: dict) -> float:
         return row["top_score"] if row["top_score"] is not None else float("-inf")
 
@@ -245,8 +274,10 @@ def main(argv: list[str] | None = None) -> int:
     scope = get_current_tenant()
     with services.session_factory() as session:
         # Load the models and warm the connections before anything is timed.
-        retrieve_passages(session, WARM_UP, scope, services.retriever, settings)
-        per_question = run_questions(session, questions, scope, services.retriever, settings)
+        retrieve_passages(session, WARM_UP, scope, services.retriever, settings, services.reranker)
+        per_question = run_questions(
+            session, questions, scope, services.retriever, settings, services.reranker
+        )
         corpus = corpus_counts(session, scope)
     try:
         require_mode(per_question, settings.retrieval_mode)
@@ -263,8 +294,7 @@ def main(argv: list[str] | None = None) -> int:
             key: getattr(settings, key) for key in RECORDED if key in type(settings).model_fields
         },
         "corpus": corpus,
-        # Task 9 replaces this with a cutoff calibrated on the dev split.
-        "cutoff_from": "configured" if cutoff is not None else "not applicable",
+        "cutoff_from": cutoff_source(cutoff, args.config, _calibration(args.out)),
         "per_question": per_question,
         "summary": summarise(per_question, questions, cutoff),
     }
@@ -274,6 +304,11 @@ def main(argv: list[str] | None = None) -> int:
     overall = result["summary"]["overall"] or {}
     print(f"Wrote {path.as_posix()}: Recall@5 {overall.get('recall@5')}")
     return 0
+
+
+def _calibration(results_dir: Path) -> dict[str, dict]:
+    path = results_dir / "calibration.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
 
 
 if __name__ == "__main__":
