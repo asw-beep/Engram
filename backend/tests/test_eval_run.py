@@ -3,7 +3,7 @@ import json
 import pytest
 
 from eval.dataset import Gold, Question
-from eval.report import render
+from eval.report import PASSAGE_NAMED, render
 from eval.run import (
     CONFIGS,
     configure,
@@ -318,7 +318,9 @@ def test_the_report_shows_the_answer_review_as_a_manual_sample():
             _answer("k-1", "Pods share a network [1] and storage [2].", "supports", "partly"),
             _answer("k-2", "As Passage 2 says, it restarts [1].", "does not support"),
         ],
+        "note": "made before the query_log field existed",
     }
+    review["answers"][0]["issues"] = ["'and storage' is in no cited passage"]
     review["settings"] = {"retrieval_mode": "hybrid", "rerank_enabled": True, "llm_model": "cfg"}
     for answer in review["answers"]:
         answer["model"] = "fallback-model"
@@ -326,8 +328,12 @@ def test_the_report_shows_the_answer_review_as_a_manual_sample():
     assert "## Answer review (manual sample)" in text
     # The models that answered, not the configured one, which may have fallen back.
     assert "`fallback-model`" in text and "`cfg`" not in text
-    assert "| k-1 | answered | 2 | 1 | 1 | 0 | no |" in text
-    assert "| k-2 | answered | 1 | 0 | 0 | 1 | yes |" in text
+    assert "| k-1 | answered | 2 | 1 | 1 | 0 | 1 | no |" in text
+    assert "| k-2 | answered | 1 | 0 | 0 | 1 | 0 | yes |" in text
+    assert "- k-1: 'and storage' is in no cited passage" in text
+    assert "made before the query_log field existed" in text
+    # Nothing ran without the prompt rule, so the count can't show the rule works.
+    assert "No run without the prompt rule" in text
     assert "1 of 2 answers name a passage" in text
     assert "2 of 3 sampled questions were asked" in text
     assert "the project's author" in text
@@ -343,3 +349,17 @@ def test_unreviewed_citations_are_reported_as_not_reviewed():
 def test_without_an_answer_review_the_report_says_none_was_made():
     text = render({"dense": _result()}, QUESTIONS, reviewed=False)
     assert "No answer review has been made" in text
+
+
+@pytest.mark.parametrize(
+    ("answer", "names"),
+    [
+        ("As Passage 2 says, it restarts [1].", True),
+        ("The first passage says it restarts [1].", True),
+        ("Passages 1 and 3 agree [1][3].", True),
+        ("The passage says it restarts [1].", False),
+        ("It restarts [1].", False),
+    ],
+)
+def test_naming_a_passage_is_caught_in_either_form(answer, names):
+    assert bool(PASSAGE_NAMED.search(answer)) is names

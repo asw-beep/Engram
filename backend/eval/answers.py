@@ -7,7 +7,8 @@ the settings as configured (the final configuration: hybrid retrieval, reranking
 calibrated cutoff), one model request each. It writes each answer, its citations and the
 stage timings to eval/results/answer_review.json, with an empty `review` per citation for
 the reviewer to fill: a `verdict` of `supports`, `partly` or `does not support` and a
-one-line `reason`. eval.report summarises the file. A file with any review filled in is
+one-line `reason`. Each answer's `issues` lists what those verdicts can miss: a statement no
+cited passage states, or a claim with no marker. eval.report summarises the file. A file with any review filled in is
 never overwritten.
 """
 
@@ -60,6 +61,8 @@ def record(question: Question, result, log) -> dict:
             }
             for citation in result.citations
         ],
+        # Statement-level problems the per-citation verdicts can miss, one line each.
+        "issues": [],
         "timings_ms": {
             "retrieve": log.retrieve_ms,
             "rerank": log.rerank_ms,

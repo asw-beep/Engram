@@ -52,6 +52,7 @@ def test_a_record_has_the_answer_its_citations_and_the_stage_timings():
                 "review": {"verdict": "", "reason": ""},
             }
         ],
+        "issues": [],
         "timings_ms": {"retrieve": 50, "rerank": 800, "generate": 3000, "total": 3900},
     }
 

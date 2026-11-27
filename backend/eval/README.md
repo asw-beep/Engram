@@ -125,7 +125,9 @@ accuracy on `dev` in `results/calibration.json`. Copy the printed cutoff into
 `eval.answers` asks every eighth answerable `test` question, at most 15, with the settings as
 configured, and writes `results/answer_review.json` with an empty `review` per citation. The
 reviewer fills each with a `verdict` (`supports`, `partly` or `does not support`) and a
-`reason`. It refuses to overwrite a file whose reviews have been started.
+`reason`, and lists in each answer's `issues` what per-citation verdicts miss: a statement no
+cited passage states, or a claim with no marker. It refuses to overwrite a file whose reviews
+have been started.
 
 Set `HF_HOME=E:/Projects/Engram/data/hf` on `eval.run` and `eval.answers`, as on the API, so
 the models load from inside the project.

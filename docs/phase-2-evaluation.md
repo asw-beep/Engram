@@ -81,20 +81,28 @@ Retrieval only, from the question to ranked passages, with the models already lo
 
 ## Answer review (manual sample)
 
-| Question | Outcome | Citations | Supports | Partly | Does not support | Names a passage |
-|---|---|---:|---:|---:|---:|---|
-| k8s-002 | answered | 2 | 1 | 1 | 0 | no |
-| k8s-015 | answered | 2 | 2 | 0 | 0 | no |
-| k8s-028 | answered | 2 | 2 | 0 | 0 | no |
-| k8s-041 | answered | 2 | 2 | 0 | 0 | no |
-| k8s-054 | answered | 4 | 4 | 0 | 0 | no |
-| k8s-068 | answered | 3 | 3 | 0 | 0 | no |
-| k8s-081 | answered | 1 | 0 | 1 | 0 | no |
-| k8s-095 | answered | 2 | 2 | 0 | 0 | no |
-| k8s-108 | answered | 2 | 2 | 0 | 0 | no |
-| k8s-121 | answered | 5 | 5 | 0 | 0 | no |
+| Question | Outcome | Citations | Supports | Partly | Does not support | Statement issues | Names a passage |
+|---|---|---:|---:|---:|---:|---:|---|
+| k8s-002 | answered | 2 | 1 | 1 | 0 | 1 | no |
+| k8s-015 | answered | 2 | 2 | 0 | 0 | 0 | no |
+| k8s-028 | answered | 2 | 2 | 0 | 0 | 0 | no |
+| k8s-041 | answered | 2 | 2 | 0 | 0 | 0 | no |
+| k8s-054 | answered | 4 | 3 | 1 | 0 | 0 | no |
+| k8s-068 | answered | 3 | 3 | 0 | 0 | 0 | no |
+| k8s-081 | answered | 1 | 0 | 1 | 0 | 1 | no |
+| k8s-095 | answered | 2 | 2 | 0 | 0 | 1 | no |
+| k8s-108 | answered | 2 | 2 | 0 | 0 | 0 | no |
+| k8s-121 | answered | 5 | 5 | 0 | 0 | 0 | no |
 
-A manual sample, not a measurement: 10 of 10 sampled questions were asked (every eighth answerable `test` question). They were asked with `hybrid` retrieval, reranking on, and answered by `nvidia/nemotron-3.5-super-vl:free`. Each citation was read against the section it cites by the developer during implementation, not yet checked by the owner, by this rule: a citation supports its sentence when the passage states the claim, or its own share of it when the sentence cites several passages; partly when it states only some of what it is cited for; does not support when it states none of it. Of 25 citations, 23 support the claim they are attached to, 2 partly support it and 0 don't. 0 of 10 answers name a passage ("Passage 2", "the first passage") instead of citing it with a marker.
+Statement issues, problems in an answer that per-citation verdicts can miss (a statement no cited passage states, or a claim with no marker):
+
+- k8s-002: 'Scaling operations are applied one Pod at a time' is inferred from the predecessor rule in [1], not stated
+- k8s-081: 'receives all subsequent mounts mounted to the volume or its subdirectories by the host' is in no cited passage: the chunk starts mid-way through HostToContainer's definition
+- k8s-095: the first sentence (the taint is added by hand after confirming the node is shut down) has no marker; [1], cited on the next sentence, states it
+
+A manual sample, not a measurement: 10 of 10 sampled questions were asked (every eighth answerable `test` question). They were asked with `hybrid` retrieval, reranking on, and answered by `nvidia/nemotron-3.5-super-vl:free`. Each citation was read against the section it cites by the developer during implementation, not yet checked by the owner, by this rule: a citation supports its sentence when the passage states the claim, or its own share of it when the sentence cites several passages; partly when it states only some of what it is cited for; does not support when it states none of it. Of 25 citations, 22 support the claim they are attached to, 3 partly support it and 0 don't. This review is provisional: one reader, the developer, made it during implementation, and the owner hasn't checked it. The answers were asked before eval.answers recorded each query_log id; the ids were added afterwards by matching each answer's question and text in the query log.
+
+0 of 10 answers name a passage ("Passage 2", "the first passage") instead of citing it with a marker, counted by a text pattern. The system prompt asks the model not to, and this sample was asked with that rule in place. No run without the prompt rule exists, so this doesn't show whether the rule made the difference.
 
 ## Plan.md §10.5 targets
 

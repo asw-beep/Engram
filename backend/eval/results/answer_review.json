@@ -53,7 +53,7 @@
           ],
           "review": {
             "verdict": "supports",
-            "reason": "lists creation in order 0..N-1, termination in reverse and the predecessor and successor rules"
+            "reason": "lists creation in order 0..N-1, termination in reverse and the predecessor and successor rules; 'one Pod at a time' is inferred from the predecessor rule"
           }
         }
       ],
@@ -62,7 +62,10 @@
         "rerank": 5864,
         "generate": 5338,
         "total": 22888
-      }
+      },
+      "issues": [
+        "'Scaling operations are applied one Pod at a time' is inferred from the predecessor rule in [1], not stated"
+      ]
     },
     {
       "id": "k8s-015",
@@ -102,7 +105,8 @@
         "rerank": 754,
         "generate": 7421,
         "total": 8338
-      }
+      },
+      "issues": []
     },
     {
       "id": "k8s-028",
@@ -144,7 +148,8 @@
         "rerank": 941,
         "generate": 5203,
         "total": 6311
-      }
+      },
+      "issues": []
     },
     {
       "id": "k8s-041",
@@ -181,7 +186,8 @@
         "rerank": 951,
         "generate": 5891,
         "total": 6945
-      }
+      },
+      "issues": []
     },
     {
       "id": "k8s-054",
@@ -220,8 +226,8 @@
             "Queuing"
           ],
           "review": {
-            "verdict": "supports",
-            "reason": "states fair queuing within a priority level, flows as FlowSchema plus distinguisher, and shuffle sharding"
+            "verdict": "partly",
+            "reason": "states fair queuing within a priority level, flows and shuffle sharding; it is also cited for queuing keeping bursty traffic from failing requests, which only [4] states"
           }
         },
         {
@@ -242,7 +248,8 @@
         "rerank": 727,
         "generate": 8152,
         "total": 9055
-      }
+      },
+      "issues": []
     },
     {
       "id": "k8s-068",
@@ -295,7 +302,8 @@
         "rerank": 776,
         "generate": 7776,
         "total": 8678
-      }
+      },
+      "issues": []
     },
     {
       "id": "k8s-081",
@@ -323,7 +331,10 @@
         "rerank": 881,
         "generate": 5789,
         "total": 6790
-      }
+      },
+      "issues": [
+        "'receives all subsequent mounts mounted to the volume or its subdirectories by the host' is in no cited passage: the chunk starts mid-way through HostToContainer's definition"
+      ]
     },
     {
       "id": "k8s-095",
@@ -363,7 +374,10 @@
         "rerank": 976,
         "generate": 3724,
         "total": 4826
-      }
+      },
+      "issues": [
+        "the first sentence (the taint is added by hand after confirming the node is shut down) has no marker; [1], cited on the next sentence, states it"
+      ]
     },
     {
       "id": "k8s-108",
@@ -398,7 +412,8 @@
         "rerank": 1023,
         "generate": 11322,
         "total": 12450
-      }
+      },
+      "issues": []
     },
     {
       "id": "k8s-121",
@@ -473,8 +488,10 @@
         "rerank": 770,
         "generate": 9433,
         "total": 10405
-      }
+      },
+      "issues": []
     }
   ],
-  "rule": "a citation supports its sentence when the passage states the claim, or its own share of it when the sentence cites several passages; partly when it states only some of what it is cited for; does not support when it states none of it"
+  "rule": "a citation supports its sentence when the passage states the claim, or its own share of it when the sentence cites several passages; partly when it states only some of what it is cited for; does not support when it states none of it",
+  "note": "This review is provisional: one reader, the developer, made it during implementation, and the owner hasn't checked it. The answers were asked before eval.answers recorded each query_log id; the ids were added afterwards by matching each answer's question and text in the query log."
 }

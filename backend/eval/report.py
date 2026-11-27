@@ -309,6 +309,7 @@ def _answer_review(review: dict | None) -> str:
         )
     answers = review["answers"]
     rows, totals, named, complete = [], dict.fromkeys(VERDICTS, 0), 0, True
+    issues = []
     for answer in answers:
         verdicts = [citation["review"].get("verdict", "") for citation in answer["citations"]]
         names = bool(PASSAGE_NAMED.search(answer.get("answer") or ""))
@@ -320,9 +321,11 @@ def _answer_review(review: dict | None) -> str:
             counts = " | ".join(str(verdicts.count(verdict)) for verdict in VERDICTS)
             for verdict in verdicts:
                 totals[verdict] = totals.get(verdict, 0) + 1
+        found = answer.get("issues", [])
+        issues += [f"- {answer['id']}: {issue}" for issue in found]
         rows.append(
             f"| {answer['id']} | {answer['outcome']} | {len(verdicts)} | {counts} | "
-            f"{'yes' if names else 'no'} |"
+            f"{len(found)} | {'yes' if names else 'no'} |"
         )
     rule = f", by this rule: {review['rule']}" if review.get("rule") else ""
     settings = review.get("settings") or {}
@@ -342,15 +345,28 @@ def _answer_review(review: dict | None) -> str:
         if complete
         else " Some citations aren't reviewed yet."
     )
+    listed = (
+        "\n\nStatement issues, problems in an answer that per-citation verdicts can miss "
+        "(a statement no cited passage states, or a claim with no marker):\n\n" + "\n".join(issues)
+        if issues
+        else ""
+    )
+    note = f" {review['note']}" if review.get("note") else ""
     return (
         heading + "| Question | Outcome | Citations | Supports | Partly | Does not support | "
-        "Names a passage |\n|---|---|---:|---:|---:|---:|---|\n" + "\n".join(rows) + "\n\n"
+        "Statement issues | Names a passage |\n|---|---|---:|---:|---:|---:|---:|---|\n"
+        + "\n".join(rows)
+        + listed
+        + "\n\n"
         f"A manual sample, not a measurement: {len(answers)} of {len(review['sampled'])} "
         "sampled questions were asked (every eighth answerable `test` question)."
         f"{asked_with} Each citation was read against the section it cites by "
-        f"{review.get('reviewer') or 'nobody yet'}{rule}.{tally} {named} of {len(answers)} answers "
-        'name a passage ("Passage 2", "the first passage") instead of citing it with a '
-        "marker."
+        f"{review.get('reviewer') or 'nobody yet'}{rule}.{tally}{note}\n\n"
+        f'{named} of {len(answers)} answers name a passage ("Passage 2", "the first '
+        'passage") instead of citing it with a marker, counted by a text pattern. The system '
+        "prompt asks the model not to, and this sample was asked with that rule in place. No run "
+        "without the prompt rule exists, so this doesn't show whether the rule made the "
+        "difference."
     )
 
 
