@@ -1,7 +1,7 @@
 import pytest
 from alembic.autogenerate import compare_metadata
 from alembic.runtime.migration import MigrationContext
-from sqlalchemy import select
+from sqlalchemy import inspect, select
 from sqlalchemy.exc import IntegrityError
 
 from app.db.base import Base
@@ -60,3 +60,13 @@ def test_models_match_the_migrations(migrated_session_factory):
 def test_deferred_version_records_the_job_waiting_for_it(session, deferred_job):
     version = session.scalars(select(DocumentVersion)).one()
     assert version.awaiting_job_id == deferred_job.id
+
+
+def test_query_logs_have_nullable_stage_columns(migrated_session_factory):
+    engine = migrated_session_factory.kw["bind"]
+    columns = {column["name"]: column for column in inspect(engine).get_columns("query_logs")}
+    for name in ("retrieval_mode", "reranked", "retrieve_ms", "rerank_ms", "generate_ms"):
+        assert columns[name]["nullable"], name
+    assert str(columns["retrieval_mode"]["type"]) == "TEXT"
+    assert str(columns["reranked"]["type"]) == "BOOLEAN"
+    assert str(columns["generate_ms"]["type"]) == "INTEGER"

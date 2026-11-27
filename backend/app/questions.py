@@ -24,7 +24,7 @@ from app.generation.context import select_passages
 from app.generation.prompts import build_messages
 from app.retrieval.base import Retriever
 from app.retrieval.pipeline import retrieve_passages
-from app.types import AccessScope, Passage
+from app.types import AccessScope, Passage, RetrievalOutcome
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +52,8 @@ def answer_question(
     settings: Settings,
 ) -> QuestionResult:
     started = time.perf_counter()
+    retrieval: RetrievalOutcome | None = None
+    generate_ms: int | None = None
 
     def finish(
         outcome: str,
@@ -73,33 +75,44 @@ def answer_question(
             input_tokens=generation.input_tokens if generation else None,
             output_tokens=generation.output_tokens if generation else None,
             latency_ms=round((time.perf_counter() - started) * 1000),
+            retrieval_mode=retrieval.mode if retrieval else None,
+            reranked=retrieval.reranked if retrieval else None,
+            retrieve_ms=retrieval.retrieve_ms if retrieval else None,
+            rerank_ms=retrieval.rerank_ms if retrieval and retrieval.reranked else None,
+            generate_ms=generate_ms,
         )
         _write_log(session, entry)
         return QuestionResult(entry.id, outcome, answer, citations or [], passages or [])
 
     try:
-        found = retrieve_passages(session, question, scope, retriever, settings).passages
+        retrieval = retrieve_passages(session, question, scope, retriever, settings)
     except Exception as error:
         logger.warning("Retrieval failed, so the question can't be answered", exc_info=True)
         _rollback(session)
         finish("retrieval_unavailable", [])
         raise RetrievalUnavailable from error
 
-    strong = [passage for passage in found if passage.score >= settings.evidence_min_score]
+    strong = [
+        passage for passage in retrieval.passages if passage.score >= settings.evidence_min_score
+    ]
     context = select_passages(
         strong, count_tokens, settings.max_passages, settings.max_context_tokens
     )
     if not context:
         return finish("insufficient_evidence", [])
 
+    generate_started = time.perf_counter()
     try:
         generation = llm.generate(GenerationRequest(build_messages(question, context)))
     except LLMQuotaExhausted:
+        generate_ms = _ms_since(generate_started)
         numbered = [build_citation(number, passage) for number, passage in enumerate(context, 1)]
         return finish("quota_exhausted", context, passages=numbered)
     except LLMError as error:
+        generate_ms = _ms_since(generate_started)
         logger.warning("No model could answer: %s", error)
         return finish("llm_error", context)
+    generate_ms = _ms_since(generate_started)
 
     if generation.status == "insufficient_evidence":
         return finish("insufficient_evidence", context, generation=generation)
@@ -110,6 +123,10 @@ def answer_question(
     return finish(
         "answered", context, answer=check.answer, citations=citations, generation=generation
     )
+
+
+def _ms_since(started: float) -> int:
+    return round((time.perf_counter() - started) * 1000)
 
 
 def _write_log(session: Session, entry: QueryLog) -> None:

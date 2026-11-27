@@ -3,8 +3,9 @@ from sqlalchemy import select, text
 
 from app.db.base import build_session_factory
 from app.db.models import QueryLog
-from app.generation.base import LLMQuotaExhausted
+from app.generation.base import LLMError, LLMQuotaExhausted
 from app.questions import RetrievalUnavailable, answer_question
+from app.retrieval.hybrid import HybridRetriever
 from tests.fakes import FakeEmbedder
 from tests.tenants import DEFAULT_SCOPE
 
@@ -81,3 +82,73 @@ def test_postgres_down_raises_retrieval_unavailable(ask, fake_llm, seed_chunk):
     with dead_factory() as dead, pytest.raises(RetrievalUnavailable):
         ask(session=dead)
     assert fake_llm.calls == []
+
+
+def _log(session, result):
+    session.expire_all()
+    return session.get(QueryLog, result.id)
+
+
+def test_an_answered_question_logs_its_mode_and_stage_timings(ask, fake_llm, seed_chunk, session):
+    seed_chunk("how pods work")
+    fake_llm.returns("answered", "Pods work [1].")
+    log = _log(session, ask())
+    assert (log.outcome, log.retrieval_mode, log.reranked) == ("answered", "dense", False)
+    assert log.retrieve_ms >= 0 and log.generate_ms >= 0
+    assert log.rerank_ms is None
+
+
+def test_a_refused_question_has_no_generation_time(ask, fake_llm, seed_chunk, session):
+    seed_chunk("completely unrelated bananas")
+    log = _log(session, ask())
+    assert log.outcome == "insufficient_evidence" and fake_llm.calls == []
+    assert log.retrieve_ms >= 0 and log.generate_ms is None
+
+
+def test_a_failed_model_call_is_still_timed(ask, fake_llm, seed_chunk, session):
+    seed_chunk("how pods work")
+    fake_llm.raises(LLMError("down"))
+    log = _log(session, ask())
+    assert log.outcome == "llm_error" and log.generate_ms >= 0
+
+
+def test_a_keyword_outage_is_logged_as_dense_fallback(
+    session, retriever, fake_llm, settings, seed_chunk
+):
+    class BrokenKeyword:
+        def search(self, query, scope, limit):
+            raise ConnectionError("OpenSearch is unavailable (test)")
+
+    seed_chunk("how pods work")
+    fake_llm.returns("answered", "Pods work [1].")
+    hybrid = HybridRetriever(retriever, BrokenKeyword(), settings.candidate_limit, settings.rrf_k)
+    result = answer_question(
+        session,
+        "how pods work",
+        DEFAULT_SCOPE,
+        hybrid,
+        fake_llm,
+        FakeEmbedder().count_tokens,
+        settings,
+    )
+    assert _log(session, result).retrieval_mode == "dense_fallback"
+
+
+def test_a_retrieval_failure_leaves_the_stage_columns_empty(session, fake_llm, settings):
+    class BrokenRetriever:
+        def search(self, query, scope, limit):
+            raise ConnectionError("Qdrant is unavailable (test)")
+
+    with pytest.raises(RetrievalUnavailable):
+        answer_question(
+            session,
+            "how pods work",
+            DEFAULT_SCOPE,
+            BrokenRetriever(),
+            fake_llm,
+            FakeEmbedder().count_tokens,
+            settings,
+        )
+    log = session.scalars(select(QueryLog)).one()
+    columns = (log.retrieval_mode, log.reranked, log.retrieve_ms, log.rerank_ms, log.generate_ms)
+    assert log.outcome == "retrieval_unavailable" and columns == (None,) * 5

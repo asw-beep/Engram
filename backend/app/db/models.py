@@ -122,4 +122,10 @@ class QueryLog(Base):
     input_tokens: Mapped[int | None]
     output_tokens: Mapped[int | None]
     latency_ms: Mapped[int]
+    # How retrieval ran and how long each stage took. Null when the stage didn't run.
+    retrieval_mode: Mapped[str | None] = mapped_column(Text)
+    reranked: Mapped[bool | None]
+    retrieve_ms: Mapped[int | None]
+    rerank_ms: Mapped[int | None]
+    generate_ms: Mapped[int | None]
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
