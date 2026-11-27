@@ -8,8 +8,8 @@ calibrated cutoff), one model request each. It writes each answer, its citations
 stage timings to eval/results/answer_review.json, with an empty `review` per citation for
 the reviewer to fill: a `verdict` of `supports`, `partly` or `does not support` and a
 one-line `reason`. Each answer's `issues` lists what those verdicts can miss: a statement no
-cited passage states, or a claim with no marker. eval.report summarises the file. A file with any review filled in is
-never overwritten.
+cited passage states, or a claim with no marker. eval.report summarises the file. A file
+with any review filled in is never overwritten.
 """
 
 import argparse
