@@ -1,8 +1,9 @@
 import json
+from pathlib import Path
 
 import pytest
 
-from eval.dataset import Gold, Question, load_questions
+from eval.dataset import KINDS, Gold, Question, load_questions
 
 
 def _line(**fields):
@@ -98,3 +99,17 @@ def test_a_line_separator_inside_a_question_is_not_a_new_line(tmp_path):
     raw = _line(question="What is a Pod?").replace("\\u2028", " ")
     path = _write(tmp_path, raw)
     assert load_questions(path)[0].question == "What is a Pod?"
+
+
+QUESTIONS_FILE = Path(__file__).resolve().parents[1] / "eval" / "questions.jsonl"
+
+
+def test_the_tracked_question_file_has_the_spec_mix():
+    questions = load_questions(QUESTIONS_FILE)
+    answerable = [q for q in questions if q.kind != "unanswerable"]
+    assert len(answerable) >= 110
+    assert sum(q.kind == "unanswerable" for q in questions) >= 18
+    for kind in KINDS:
+        of_kind = [q for q in questions if q.kind == kind]
+        share = sum(q.split == "dev" for q in of_kind) / len(of_kind)
+        assert 0.35 <= share <= 0.45, f"{kind}: {share:.0%} dev"

@@ -125,6 +125,7 @@ def test_the_report_computes_the_exact_term_share_and_review_state():
     reviewed = render({"dense": _result()}, QUESTIONS, reviewed=True)
     assert "33% of the answerable questions use exact terms" in provisional
     assert "hasn't reviewed" in provisional and "The owner reviewed a sample" in reviewed
+    assert "echoes a heading" in provisional and "page's introduction" in provisional
 
 
 def test_the_report_names_the_recorded_device():
