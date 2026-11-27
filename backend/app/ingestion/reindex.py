@@ -2,9 +2,10 @@
 
 It writes every chunk of every current version, for every tenant, each under its own tenant
 and permissions. Run on an emptied index it restores exactly what PostgreSQL holds; run on a
-live one it adds what is missing and rewrites what drifted. It never removes entries: those
-of old versions stay until the next publish of that document clears them, and search
-rechecks the current version, so they are never shown.
+live one it adds what is missing and rewrites what drifted. It never removes entries. One
+left behind when removing an old version failed stays until the index is emptied and
+rebuilt, because a later publish removes only the version that was current then; search
+rechecks the current version in PostgreSQL, so such an entry is never shown.
 """
 
 from uuid import UUID

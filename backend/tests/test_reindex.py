@@ -61,7 +61,7 @@ def test_reindex_keeps_each_tenants_chunks_under_that_tenant(
 ):
     ingest({"a.md": b"# A\nalpha\n"})
     own = session.scalars(select(Chunk)).one()
-    document = make_document(tenant=other_tenant)
+    document = make_document(tenant=other_tenant, allowed_principals=["group:sre"])
     version = make_version(document)
     other = make_chunk(version, content="other tenant text")
     document.current_version_id = version.id
@@ -69,8 +69,14 @@ def test_reindex_keeps_each_tenants_chunks_under_that_tenant(
     _empty(keyword_index)
 
     assert reindex_keyword(session, keyword_index) == 2
-    tenants = {chunk_id: entry["tenant_id"] for chunk_id, entry in _entries(keyword_index).items()}
-    assert tenants == {own.id: str(own.tenant_id), other.id: str(other_tenant.id)}
+    owners = {
+        chunk_id: (entry["tenant_id"], entry["allowed_principals"])
+        for chunk_id, entry in _entries(keyword_index).items()
+    }
+    assert owners == {
+        own.id: (str(own.tenant_id), ["tenant"]),
+        other.id: (str(other_tenant.id), ["group:sre"]),
+    }
 
 
 def test_reindex_creates_a_missing_index(session, ingest, keyword_index):

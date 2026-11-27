@@ -142,3 +142,13 @@ def test_a_failed_qdrant_delete_still_clears_the_keyword_index(
     monkeypatch.setattr(index, "delete_version", refuse)
     job = ingest({"guide.md": b"# A\nnew\n"})
     assert job.status == "succeeded" and keyword_index.count() == 1
+
+
+def test_published_text_carries_the_documents_own_principals(session, ingest, keyword_index):
+    ingest({"guide.md": b"# A\nold\n"})
+    document = session.scalars(select(Document)).one()
+    document.allowed_principals = ["group:sre"]
+    session.commit()
+    ingest({"guide.md": b"# A\nnew\n"})
+    entries = list(keyword_entries(keyword_index).values())
+    assert [entry["allowed_principals"] for entry in entries] == [["group:sre"]]
