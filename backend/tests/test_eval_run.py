@@ -4,7 +4,7 @@ import pytest
 
 from eval.dataset import Gold, Question
 from eval.report import render
-from eval.run import run_questions, summarise
+from eval.run import gate_cutoff, require_mode, run_questions, summarise
 from tests.tenants import DEFAULT_SCOPE
 
 
@@ -147,3 +147,30 @@ def test_a_row_without_its_outside_set_is_rejected():
     stale = [{k: v for k, v in row.items() if k != "outside"} for row in PER_QUESTION]
     with pytest.raises(ValueError, match="k-1"):
         summarise(stale, QUESTIONS, cutoff=0.5)
+
+
+def test_unreranked_hybrid_scores_get_no_evidence_gate():
+    assert summarise(PER_QUESTION, QUESTIONS, cutoff=None)["evidence_gate"] is None
+
+
+def test_the_gate_cutoff_is_missing_only_for_unreranked_hybrid(settings):
+    dense = settings.model_copy(update={"retrieval_mode": "dense"})
+    hybrid = settings.model_copy(update={"retrieval_mode": "hybrid"})
+    assert gate_cutoff(dense) == settings.evidence_min_score
+    assert gate_cutoff(hybrid) is None
+
+
+def test_a_run_that_fell_back_to_dense_is_not_saved_as_hybrid():
+    rows = [{"id": "k-1", "mode": "hybrid"}, {"id": "k-2", "mode": "dense_fallback"}]
+    with pytest.raises(ValueError, match="k-2"):
+        require_mode(rows, "hybrid")
+    require_mode(rows[:1], "hybrid")
+
+
+def test_the_report_marks_the_unreranked_hybrid_gate_not_applicable():
+    hybrid = _result(cutoff_from="not applicable")
+    hybrid["config"] = "hybrid"
+    hybrid["summary"]["evidence_gate"] = None
+    text = render({"dense": _result(), "hybrid": hybrid}, QUESTIONS, reviewed=False)
+    assert "| hybrid | – | not applicable | – | – | – |" in text
+    assert "RRF" in text

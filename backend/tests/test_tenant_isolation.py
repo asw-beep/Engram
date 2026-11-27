@@ -13,7 +13,15 @@ SCOPE_B = AccessScope(TENANT_B, ("tenant",))
 
 def test_tenant_b_search_finds_nothing_from_tenant_a(retriever, seed_chunk):
     seed_chunk("secret", tenant=TENANT_A)
-    assert retriever.search("secret", SCOPE_B, 20) == []
+    assert retriever.search("secret", SCOPE_B, 20).hits == []
+
+
+def test_hybrid_search_for_tenant_b_finds_only_tenant_bs_chunks(hybrid_retriever, seed_chunk):
+    seed_chunk("secret plans", tenant=TENANT_A)
+    own = seed_chunk("secret plans", tenant=TENANT_B)
+    result = hybrid_retriever.search("secret plans", SCOPE_B, 20)
+    assert result.mode == "hybrid"
+    assert [hit.chunk_id for hit in result.hits] == [own.id]
 
 
 def test_recheck_drops_foreign_chunk_even_if_qdrant_returns_it(session, seed_chunk):

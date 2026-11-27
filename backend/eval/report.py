@@ -135,6 +135,9 @@ def _gate(results: dict[str, dict]) -> str:
             rows.append(f"| {config} | not run | – | – | – | – |")
         else:
             source = results[config].get("cutoff_from", "not recorded")
+            if gate is None:
+                rows.append(f"| {config} | – | {source} | – | – | – |")
+                continue
             cells = [_num(gate, key) for key in ("answerable_passed", "unanswerable_refused")]
             rows.append(
                 f"| {config} | {_num(gate, 'cutoff')} | {source} | "
@@ -150,7 +153,8 @@ def _gate(results: dict[str, dict]) -> str:
         "every passage above the cutoff is too large for the context budget, which the harness "
         "doesn't model. Balanced accuracy is the mean of the two shares. A `configured` "
         "cutoff is the `evidence_min_score` setting, not tuned on this dataset; a calibrated "
-        "one was chosen on the `dev` split only."
+        "one was chosen on the `dev` split only. Unreranked `hybrid` has no gate: its scores "
+        "are RRF values, which rank passages but aren't comparable to a cutoff."
     )
 
 

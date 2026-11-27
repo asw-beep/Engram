@@ -27,7 +27,9 @@ def retrieve_passages(
     settings: Settings,
 ) -> RetrievalOutcome:
     started = time.perf_counter()
-    hits = retriever.search(normalise_question(question), scope, settings.retrieval_limit)
-    passages = load_passages(session, hits, scope)
+    result = retriever.search(normalise_question(question), scope, settings.retrieval_limit)
+    # Every hit, dense or keyword, is rechecked here against PostgreSQL: tenant, current
+    # version and principals.
+    passages = load_passages(session, result.hits, scope)
     retrieve_ms = round((time.perf_counter() - started) * 1000)
-    return RetrievalOutcome(passages, "dense", False, retrieve_ms, 0)
+    return RetrievalOutcome(passages, result.mode, False, retrieve_ms, 0)

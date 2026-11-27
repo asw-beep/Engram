@@ -69,6 +69,29 @@ def configure(settings: Settings, config: str) -> Settings:
     return settings.model_copy(update=updates)
 
 
+def gate_cutoff(settings: Settings) -> float | None:
+    """The cutoff the score gate is measured at, or None when the scores can't be gated.
+
+    Unreranked hybrid scores are RRF values: they rank passages but aren't comparable to a
+    cutoff, so reporting a gate for them would describe nothing the API does.
+    """
+    if settings.retrieval_mode == "hybrid" and not getattr(settings, "rerank_enabled", False):
+        return None
+    return settings.evidence_min_score
+
+
+def require_mode(per_question: list[dict], mode: str) -> None:
+    """Refuse a run where any question was answered another way, such as a dense fallback.
+
+    A hybrid result file holding fallback answers would be a dense run under a hybrid label.
+    """
+    other = [row["id"] for row in per_question if row["mode"] != mode]
+    if other:
+        raise ValueError(
+            f"{len(other)} questions were not answered in {mode} mode, for example {other[0]}"
+        )
+
+
 def run_questions(
     session: Session,
     questions: list[Question],
@@ -113,7 +136,7 @@ def _outside_gold(session: Session, scope: AccessScope, gold: tuple[Gold, ...]) 
     }
 
 
-def summarise(per_question: list[dict], questions: list[Question], cutoff: float) -> dict:
+def summarise(per_question: list[dict], questions: list[Question], cutoff: float | None) -> dict:
     """Metrics over the test split only. Dev questions are for tuning (spec §3)."""
     by_id = {q.id: q for q in questions}
     test = [(by_id[row["id"]], row) for row in per_question if by_id[row["id"]].split == "test"]
@@ -134,7 +157,7 @@ def summarise(per_question: list[dict], questions: list[Question], cutoff: float
             "median": statistics.median(latencies) if latencies else None,
             "p95": percentile(latencies, 95) if latencies else None,
         },
-        "evidence_gate": _gate(answerable, unanswerable, cutoff),
+        "evidence_gate": None if cutoff is None else _gate(answerable, unanswerable, cutoff),
     }
 
 
@@ -225,8 +248,13 @@ def main(argv: list[str] | None = None) -> int:
         retrieve_passages(session, WARM_UP, scope, services.retriever, settings)
         per_question = run_questions(session, questions, scope, services.retriever, settings)
         corpus = corpus_counts(session, scope)
+    try:
+        require_mode(per_question, settings.retrieval_mode)
+    except ValueError as error:
+        print(f"{error}; nothing written. Is OpenSearch up?", file=sys.stderr)
+        return 1
 
-    cutoff = settings.evidence_min_score
+    cutoff = gate_cutoff(settings)
     result = {
         "config": args.config,
         "created_at": datetime.now(UTC).isoformat(timespec="seconds"),
@@ -236,7 +264,7 @@ def main(argv: list[str] | None = None) -> int:
         },
         "corpus": corpus,
         # Task 9 replaces this with a cutoff calibrated on the dev split.
-        "cutoff_from": "configured",
+        "cutoff_from": "configured" if cutoff is not None else "not applicable",
         "per_question": per_question,
         "summary": summarise(per_question, questions, cutoff),
     }

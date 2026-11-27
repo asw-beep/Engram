@@ -22,7 +22,7 @@ The corpus held 186 current documents and 2533 chunks when the first listed run 
 | Configuration | Recall@5 | Recall@10 | MRR@10 | NDCG@10 |
 |---|---:|---:|---:|---:|
 | dense | 0.890 | 0.945 | 0.807 | 0.849 |
-| hybrid | not run | – | – | – |
+| hybrid | 0.836 | 0.877 | 0.763 | 0.793 |
 | hybrid_rerank | not run | – | – | – |
 
 - `dense`: BGE-M3 vectors in Qdrant
@@ -35,26 +35,26 @@ A chunk is relevant when it comes from a gold document and its heading path star
 
 | Kind | Questions | dense | hybrid | hybrid_rerank |
 |---|---:|---|---|---|
-| conceptual | 37 | 0.946 / 0.759 | not run | not run |
-| exact_term | 24 | 0.917 / 0.902 | not run | not run |
-| multi_section | 12 | 0.667 / 0.764 | not run | not run |
+| conceptual | 37 | 0.946 / 0.759 | 0.865 / 0.677 | not run |
+| exact_term | 24 | 0.917 / 0.902 | 0.958 / 0.865 | not run |
+| multi_section | 12 | 0.667 / 0.764 | 0.500 / 0.819 | not run |
 
 ## Evidence gate (test split)
 
 | Configuration | Cutoff | Cutoff from | Answerable passed | Unanswerable refused | Balanced accuracy |
 |---|---:|---|---:|---:|---:|
 | dense | 0.500 | configured | 1.000 | 0.500 | 0.750 |
-| hybrid | not run | – | – | – | – |
+| hybrid | – | not applicable | – | – | – |
 | hybrid_rerank | not run | – | – | – | – |
 
-A question passes when its highest passage score is at or above the cutoff, the rule `answer_question` applies. This is the score gate only: the API also refuses when every passage above the cutoff is too large for the context budget, which the harness doesn't model. Balanced accuracy is the mean of the two shares. A `configured` cutoff is the `evidence_min_score` setting, not tuned on this dataset; a calibrated one was chosen on the `dev` split only.
+A question passes when its highest passage score is at or above the cutoff, the rule `answer_question` applies. This is the score gate only: the API also refuses when every passage above the cutoff is too large for the context budget, which the harness doesn't model. Balanced accuracy is the mean of the two shares. A `configured` cutoff is the `evidence_min_score` setting, not tuned on this dataset; a calibrated one was chosen on the `dev` split only. Unreranked `hybrid` has no gate: its scores are RRF values, which rank passages but aren't comparable to a cutoff.
 
 ## Retrieval latency (test split)
 
 | Configuration | Median (ms) | p95 (ms) | Embedding device |
 |---|---:|---:|---|
-| dense | 42 | 77 | `cuda` |
-| hybrid | not run | – | – |
+| dense | 42 | 72 | `cuda` |
+| hybrid | 57 | 98 | `cuda` |
 | hybrid_rerank | not run | – | – |
 
 Retrieval only, from the question to ranked passages, with the models already loaded, on the machine that ran `eval.run`, not the production server. Generation isn't included.
@@ -63,7 +63,7 @@ Retrieval only, from the question to ranked passages, with the models already lo
 
 | Target | dense | hybrid | hybrid_rerank |
 |---|---|---|---|
-| Recall@5 ≥ 85% | provisional (0.890) | not run | not run |
+| Recall@5 ≥ 85% | provisional (0.890) | provisional (0.836) | not run |
 
 A target is called met or missed only once the owner has reviewed the question sample. The query latency target (p95 under 5 seconds) covers the whole answer, including generation, so this phase can't report it as met or missed: the retrieval part is in the latency table above, and end-to-end latency on the production server is measured in Phase 4. Citation validity, tenant isolation and ingestion recovery aren't measured by this harness.
 

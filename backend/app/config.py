@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -32,7 +33,12 @@ class Settings(BaseSettings):
     evidence_min_score: float = 0.50
     max_chunk_tokens: int = 512
     chunk_overlap_tokens: int = 50
-    retrieval_limit: int = 20
+    # Dense until reranking lands: unreranked hybrid scores are RRF values, which rank
+    # passages but aren't comparable to evidence_min_score.
+    retrieval_mode: Literal["dense", "hybrid"] = "dense"
+    candidate_limit: int = 50
+    rrf_k: int = 60
+    retrieval_limit: int = 30
     max_passages: int = 8
     max_context_tokens: int = 4000
     max_question_chars: int = 2000

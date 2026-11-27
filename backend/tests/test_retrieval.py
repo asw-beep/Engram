@@ -10,7 +10,9 @@ pytestmark = pytest.mark.usefixtures("two_tenants")
 def test_closest_chunk_ranks_first(retriever, seed_chunk):
     seed_chunk("kubernetes pods schedule containers")
     seed_chunk("bananas are yellow fruit")
-    hits = retriever.search("how do pods schedule", DEFAULT_SCOPE, 20)
+    result = retriever.search("how do pods schedule", DEFAULT_SCOPE, 20)
+    assert result.mode == "dense"
+    hits = result.hits
     assert hits[0].score > hits[1].score
 
 

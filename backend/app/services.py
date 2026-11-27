@@ -21,7 +21,10 @@ from app.ingestion.connectors.base import Connector, ConnectorError
 from app.ingestion.connectors.github import GitHubConnector
 from app.ingestion.connectors.upload import UploadConnector
 from app.ingestion.pipeline import IngestionDeps
+from app.retrieval.base import Retriever
 from app.retrieval.dense import DenseRetriever
+from app.retrieval.hybrid import HybridRetriever
+from app.retrieval.keyword import KeywordRetriever
 from app.storage.files import FileStore
 
 
@@ -83,9 +86,17 @@ def build_services(settings: Settings) -> Services:
         keyword_index=keyword_index,
         connector_for=make_connector_for(file_store, httpx.Client(timeout=30.0), settings),
         settings=settings,
-        retriever=DenseRetriever(embedder, index),
+        retriever=_retriever(settings, DenseRetriever(embedder, index), keyword_index),
         llm=ResilientLLM(
             primary=provider(settings.llm_model, structured=True),
             fallback=provider(settings.llm_fallback_model, structured=False),
         ),
     )
+
+
+def _retriever(settings: Settings, dense: DenseRetriever, keyword_index: KeywordIndex) -> Retriever:
+    if settings.retrieval_mode == "hybrid":
+        return HybridRetriever(
+            dense, KeywordRetriever(keyword_index), settings.candidate_limit, settings.rrf_k
+        )
+    return dense

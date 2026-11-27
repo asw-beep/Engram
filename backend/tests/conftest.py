@@ -27,7 +27,7 @@ from app.db.constants import (  # noqa: E402
     OPEN_JOB_STATUSES,
     JobStatus,
 )
-from app.db.keyword_index import KeywordIndex  # noqa: E402
+from app.db.keyword_index import IndexedText, KeywordIndex, heading_text  # noqa: E402
 from app.db.models import (  # noqa: E402
     Chunk,
     Document,
@@ -42,6 +42,8 @@ from app.ingestion.jobs import create_job, retry_job  # noqa: E402
 from app.ingestion.pipeline import IngestionDeps, run_ingestion  # noqa: E402
 from app.main import create_app  # noqa: E402
 from app.retrieval.dense import DenseRetriever  # noqa: E402
+from app.retrieval.hybrid import HybridRetriever  # noqa: E402
+from app.retrieval.keyword import KeywordRetriever  # noqa: E402
 from app.services import Services, make_connector_for  # noqa: E402
 from app.storage.files import FileStore  # noqa: E402
 from tests.fakes import FailingConnector, FakeEmbedder, FakeLLM  # noqa: E402
@@ -539,8 +541,16 @@ def retriever(deps):
 
 
 @pytest.fixture
-def seed_chunk(session, index, two_tenants):
-    """Publish one chunk to Postgres and Qdrant, in the current version of the path's document."""
+def hybrid_retriever(deps, retriever, settings):
+    return HybridRetriever(
+        retriever, KeywordRetriever(deps.keyword_index), settings.candidate_limit, settings.rrf_k
+    )
+
+
+@pytest.fixture
+def seed_chunk(session, index, keyword_index, two_tenants):
+    """Publish one chunk to Postgres, Qdrant and OpenSearch, in the current version of the
+    path's document."""
     embedder = FakeEmbedder()
 
     def seed(text, tenant=DEFAULT_TENANT_ID, principals=("tenant",), path="a.md"):
@@ -591,6 +601,19 @@ def seed_chunk(session, index, two_tenants):
                 IndexedPoint(
                     chunk_id=chunk.id,
                     vector=embedder.embed_passages([text], 1)[0],
+                    tenant_id=tenant,
+                    document_id=document.id,
+                    document_version_id=version.id,
+                    allowed_principals=list(document.allowed_principals),
+                )
+            ]
+        )
+        keyword_index.upsert(
+            [
+                IndexedText(
+                    chunk_id=chunk.id,
+                    content=text,
+                    headings=heading_text(chunk.heading_path or []),
                     tenant_id=tenant,
                     document_id=document.id,
                     document_version_id=version.id,
