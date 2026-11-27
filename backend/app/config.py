@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    database_url: str = "postgresql+psycopg://engram:engram@127.0.0.1:55432/engram"
+    database_url: str = "postgresql+psycopg://engram:engram@127.0.0.1:15432/engram"
     qdrant_url: str = "http://127.0.0.1:6333"
     qdrant_collection: str = "chunks_bge_m3_v1"
     storage_dir: str = "../data/files"
