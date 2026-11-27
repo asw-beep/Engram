@@ -42,3 +42,10 @@ def test_recheck_drops_chunk_from_non_current_version(session, seed_chunk, super
 
 def test_recheck_ignores_missing_rows(session):
     assert load_passages(session, [RetrievalHit(uuid4(), 0.9)], DEFAULT_SCOPE) == []
+
+
+def test_hybrid_search_needs_a_shared_principal(hybrid_retriever, seed_chunk):
+    seed_chunk("restricted runbook", principals=["group:sre"])
+    assert hybrid_retriever.search("restricted runbook", DEFAULT_SCOPE, 20).hits == []
+    sre = AccessScope(DEFAULT_SCOPE.tenant_id, ("tenant", "group:sre"))
+    assert len(hybrid_retriever.search("restricted runbook", sre, 20).hits) == 1

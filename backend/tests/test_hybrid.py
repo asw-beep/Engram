@@ -1,5 +1,6 @@
 import logging
 import threading
+import time
 from uuid import uuid4
 
 import pytest
@@ -121,3 +122,20 @@ def test_keyword_retriever_reports_keyword_mode(seed_chunk, keyword_index):
 def test_build_services_picks_the_retriever_for_the_mode(settings, mode, kind):
     services = build_services(settings.model_copy(update={"retrieval_mode": mode}))
     assert isinstance(services.retriever, kind)
+
+
+def test_a_dense_failure_does_not_wait_for_the_keyword_search():
+    release = threading.Event()
+
+    class SlowKeyword:
+        def search(self, query, scope, limit):
+            release.wait(timeout=10)
+            return SearchResult([], "keyword")
+
+    started = time.monotonic()
+    try:
+        with pytest.raises(ConnectionError):
+            _hybrid(BrokenRetriever(), SlowKeyword()).search("q", DEFAULT_SCOPE, 10)
+        assert time.monotonic() - started < 5
+    finally:
+        release.set()

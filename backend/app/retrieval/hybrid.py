@@ -24,7 +24,8 @@ class HybridRetriever:
 
     def search(self, query: str, scope: AccessScope, limit: int) -> SearchResult:
         # A pool per search, so concurrent questions never queue behind each other's searches.
-        with ThreadPoolExecutor(max_workers=2, thread_name_prefix="hybrid-search") as pool:
+        pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="hybrid-search")
+        try:
             dense_search = pool.submit(self._dense.search, query, scope, self._candidate_limit)
             keyword_search = pool.submit(self._keyword.search, query, scope, self._candidate_limit)
             dense = dense_search.result()
@@ -35,6 +36,9 @@ class HybridRetriever:
                     "Keyword search failed; answering from dense search alone", exc_info=True
                 )
                 return SearchResult(dense.hits[:limit], "dense_fallback")
+        finally:
+            # Don't hold a dense failure back until the keyword search ends; it finishes alone.
+            pool.shutdown(wait=False)
         fused = reciprocal_rank_fusion(
             [[hit.chunk_id for hit in dense.hits], [hit.chunk_id for hit in keyword.hits]],
             self._rrf_k,

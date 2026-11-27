@@ -105,11 +105,16 @@ def test_a_refused_question_has_no_generation_time(ask, fake_llm, seed_chunk, se
     assert log.retrieve_ms >= 0 and log.generate_ms is None
 
 
-def test_a_failed_model_call_is_still_timed(ask, fake_llm, seed_chunk, session):
+@pytest.mark.parametrize(
+    ("error", "outcome"),
+    [(LLMError("down"), "llm_error"), (LLMQuotaExhausted("spent"), "quota_exhausted")],
+    ids=["error", "quota"],
+)
+def test_a_failed_model_call_is_still_timed(ask, fake_llm, seed_chunk, session, error, outcome):
     seed_chunk("how pods work")
-    fake_llm.raises(LLMError("down"))
+    fake_llm.raises(error)
     log = _log(session, ask())
-    assert log.outcome == "llm_error" and log.generate_ms >= 0
+    assert log.outcome == outcome and log.generate_ms >= 0
 
 
 def test_a_keyword_outage_is_logged_as_dense_fallback(
