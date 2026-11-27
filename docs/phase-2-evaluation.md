@@ -53,7 +53,7 @@ A question passes when its highest passage score is at or above the cutoff, the 
 
 | Configuration | Median (ms) | p95 (ms) | Embedding device |
 |---|---:|---:|---|
-| dense | 44 | 80 | `cuda` |
+| dense | 42 | 77 | `cuda` |
 | hybrid | not run | – | – |
 | hybrid_rerank | not run | – | – |
 

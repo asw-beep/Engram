@@ -1,6 +1,8 @@
+from types import SimpleNamespace
+
 from eval.check import label_problems
 from eval.dataset import Gold, Question
-from tests.tenants import DEFAULT_SCOPE
+from tests.tenants import DEFAULT_SCOPE, TENANT_B
 
 
 def _question(qid, *gold):
@@ -55,3 +57,15 @@ def test_only_the_current_version_counts(session, make_document, make_version, m
     assert label_problems(session, DEFAULT_SCOPE, questions) == [
         "k-1: no chunk of pods.md under Pods > Removed section"
     ]
+
+
+def test_another_tenants_document_does_not_satisfy_a_label(
+    session, two_tenants, make_document, make_version, make_chunk
+):
+    document = make_document(path="pods.md", tenant=SimpleNamespace(id=TENANT_B))
+    version = make_version(document)
+    make_chunk(version, 0, heading_path=["Pods"])
+    document.current_version_id = version.id
+    session.commit()
+    questions = [_question("k-1", Gold("pods.md", ("Pods",)))]
+    assert label_problems(session, DEFAULT_SCOPE, questions) == ["k-1: no current document pods.md"]
