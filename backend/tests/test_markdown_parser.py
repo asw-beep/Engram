@@ -166,3 +166,29 @@ def test_a_split_shortcode_never_spans_a_fence():
     doc = parse_markdown(b"# T\n\nx {{< note\n\n```\n>}}\n```\n")
     text = doc.sections[-1].text
     assert "{{< note" in text and "```\n>}}\n```" in text
+
+
+CODE_TAB = (
+    b"## Example\n"
+    b'{{< tabs name="examples" >}}\n'
+    b'{{< tab name="Linux node" codelang="yaml" >}}\n'
+    b"---\n"
+    b"# The mount is read-only.\n"
+    b"kind: Pod\n"
+    b"{{< /tab >}}\n"
+    b"{{< /tabs >}}\n"
+    b"## After\n"
+    b"z\n"
+)
+
+
+def test_a_code_tab_is_code_so_its_comments_are_not_headings():
+    doc = parse_file("a.md", CODE_TAB)
+    assert [s.heading_path for s in doc.sections] == [("Example",), ("After",)]
+    assert "# The mount is read-only." in doc.sections[0].text
+    assert doc.sections[1].start_line == 9
+
+
+def test_a_tab_without_codelang_stays_prose():
+    doc = parse_file("a.md", b'## A\na\n{{< tab name="Shell" >}}\n## B\nx\n{{< /tab >}}\n')
+    assert [s.heading_path for s in doc.sections] == [("A",), ("B",)]

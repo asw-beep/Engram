@@ -38,6 +38,10 @@ _HEADING_LABELS = {
     "options": "Options",
 }
 _FENCE = re.compile(r"^\s*(`{3,}|~{3,})")
+# {{< tab codelang="yaml" >}} shows its content as code, with no fence in the source, so
+# a "# comment" inside it would otherwise read as a heading. Its tags become this fence.
+_CODELANG_ATTRIBUTE = re.compile(r"""\bcodelang=(?:"([^"]*)"|'([^']*)')""")
+_CODE_TAB_FENCE = "~~~~~"
 
 
 @dataclass(frozen=True)
@@ -84,10 +88,25 @@ def _strip_shortcodes(lines: list[str]) -> list[str]:
     result: list[str] = []
     prose: list[str] = []
     fence = ""
+    in_code_tab = False
+
+    def replace(match: re.Match[str]) -> str:
+        nonlocal in_code_tab
+        body = match.group(1) if match.group(1) is not None else match.group(2)
+        padding = "\n" * body.count("\n")
+        name = _SHORTCODE_NAME.match(body)
+        language = _quoted(_CODELANG_ATTRIBUTE.search(body))
+        if not in_code_tab and name and name.group(1) == "tab" and language is not None:
+            in_code_tab = True
+            return f"{_CODE_TAB_FENCE} {language}".rstrip() + padding
+        if in_code_tab and body.strip() == "/tab":
+            in_code_tab = False
+            return _CODE_TAB_FENCE + padding
+        return _shortcode_text(match)
 
     def flush() -> None:
         if prose:
-            result.extend(_SHORTCODE.sub(_shortcode_text, "\n".join(prose)).split("\n"))
+            result.extend(_SHORTCODE.sub(replace, "\n".join(prose)).split("\n"))
             prose.clear()
 
     for line in lines:
