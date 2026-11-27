@@ -109,7 +109,8 @@ def _strip_shortcodes(lines: list[str]) -> list[str]:
 
 def _shortcode_text(match: re.Match[str]) -> str:
     body = match.group(1) if match.group(1) is not None else match.group(2)
-    return _shortcode_value(body) + "\n" * body.count("\n")
+    # The padding restores every newline the tag held, so the value itself must have none.
+    return " ".join(_shortcode_value(body).split("\n")) + "\n" * body.count("\n")
 
 
 def _shortcode_value(body: str) -> str:

@@ -155,6 +155,13 @@ def test_a_shortcode_split_across_lines_is_removed():
     assert (last.start_line, last.end_line) == (6, 8)
 
 
+def test_a_value_split_across_lines_keeps_later_line_numbers():
+    doc = parse_markdown(b'# A\n\nfoo {{< glossary_tooltip text="a\nb" >}} bar\n\n# B\n\ny\n')
+    first, last = doc.sections
+    assert "foo a b" in first.text
+    assert (last.start_line, last.end_line) == (6, 8)
+
+
 def test_a_split_shortcode_never_spans_a_fence():
     doc = parse_markdown(b"# T\n\nx {{< note\n\n```\n>}}\n```\n")
     text = doc.sections[-1].text
