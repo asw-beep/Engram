@@ -73,8 +73,9 @@ def test_an_identifier_finds_its_chunk_first(keyword_index, term, exact, near):
 
 
 def test_another_tenants_chunk_never_comes_back(keyword_index):
-    keyword_index.upsert([_text("tenant secret plans", tenant=TENANT_B)])
-    assert keyword_index.search("secret plans", SCOPE_A, 10) == []
+    own = _text("tenant secret plans")
+    keyword_index.upsert([_text("tenant secret plans", tenant=TENANT_B), own])
+    assert _ids(keyword_index.search("secret plans", SCOPE_A, 10)) == [own.chunk_id]
 
 
 def test_a_chunk_without_a_shared_principal_never_comes_back(keyword_index):
