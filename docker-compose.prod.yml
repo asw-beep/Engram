@@ -53,6 +53,7 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://engram:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}@postgres:5432/engram
       QDRANT_URL: http://qdrant:6333
+      OPENSEARCH_URL: http://opensearch:9200
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:?set OPENROUTER_API_KEY in .env.prod}
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
       STORAGE_DIR: /data/files
@@ -63,6 +64,8 @@ services:
       # host core, not per CPU it may use.
       EMBEDDING_BATCH_SIZE: "4"
       OMP_NUM_THREADS: "2"
+      # The reranker runs on the same CPU in full precision; small batches bound its memory.
+      RERANKER_BATCH_SIZE: "4"
       PRELOAD_EMBEDDING_MODEL: "true"
     volumes:
       - models:/models
@@ -72,7 +75,12 @@ services:
         condition: service_healthy
       qdrant:
         condition: service_healthy
-    mem_limit: 4g
+      opensearch:
+        condition: service_healthy
+    # BGE-M3 and the reranker, each about 2.3 GB in full precision on the CPU, plus working
+    # memory. 6g is an estimate, not a measurement: Phase 4 measures it and sizes the server,
+    # since the caps now add up to more than the 8 GiB Phase 1 server (Phase 2 spec, section 10).
+    mem_limit: 6g
     restart: unless-stopped
     logging: *logging
     healthcheck:
@@ -116,12 +124,35 @@ services:
       timeout: 3s
       retries: 10
 
+  opensearch:
+    image: opensearchproject/opensearch:3.9.0
+    environment:
+      discovery.type: single-node
+      # No port is published: only the API reaches it, on the Compose network. It holds a
+      # projection that `reindex-keyword` rebuilds from PostgreSQL.
+      DISABLE_SECURITY_PLUGIN: "true"
+      DISABLE_INSTALL_DEMO_CONFIG: "true"
+      OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    # The heap is half the cap; the rest is for Lucene's file cache and the JVM itself.
+    mem_limit: 1g
+    restart: unless-stopped
+    logging: *logging
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+
 volumes:
   postgres-data:
   qdrant-data:
+  opensearch-data:
   files:
-  # BGE-M3 (about 4 GB). The first start downloads it into this volume. On the laptop it is
-  # the volume Task 2 filled from the local cache, so nothing is downloaded again.
+  # BGE-M3 (about 4 GB) and BGE-reranker-v2-m3 (about 2.2 GB). The first start downloads
+  # them into this volume. On the laptop it is the volume Phase 1's Task 2 filled from the
+  # local cache, so BGE-M3 isn't downloaded again; the reranker is, once.
   models:
     name: engram-hf
   caddy-data:

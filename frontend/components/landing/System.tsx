@@ -4,7 +4,7 @@ import type { Rule, Store } from "@/lib/system";
 export default function System({ stores, rules }: { stores: Store[]; rules: Rule[] }) {
   return (
     <section id="system" className="l-section system">
-      <p className="label section-label">04 — System</p>
+      <p className="label section-label">05 — System</p>
       <h2 className="section-title">Five stores, three rules.</h2>
       <p className="section-lede">
         PostgreSQL is the record of truth. Everything else is a projection that can be rebuilt from

@@ -2,10 +2,11 @@ import { render, screen, within } from "@testing-library/react";
 import { expect, test } from "vitest";
 
 import BuildLog from "@/components/landing/BuildLog";
+import Measured from "@/components/landing/Measured";
 import QueryDiagram from "@/components/landing/QueryDiagram";
 import System from "@/components/landing/System";
 import Ticker from "@/components/landing/Ticker";
-import { PHASES, QUERY_PATH, RULES, SOURCE_TYPES, STORES } from "@/lib/system";
+import { MEASURED, PHASES, QUERY_PATH, RULES, SOURCE_TYPES, STORES } from "@/lib/system";
 
 /** The list item or card that holds the given text. */
 function itemWith(text: string): HTMLElement {
@@ -14,27 +15,44 @@ function itemWith(text: string): HTMLElement {
   return item;
 }
 
-test("the query diagram marks only the parts that are not built as planned", () => {
+test("the query diagram shows every part as built", () => {
   render(<QueryDiagram path={QUERY_PATH} />);
-  expect(within(itemWith("BM25")).getByText("planned")).toBeInTheDocument();
-  expect(within(itemWith("Fuse + rerank")).getByText("planned")).toBeInTheDocument();
-  expect(within(itemWith("Dense")).queryByText("planned")).not.toBeInTheDocument();
-  expect(within(itemWith("Cited answer")).queryByText("planned")).not.toBeInTheDocument();
+  expect(screen.getByText("BM25")).toBeInTheDocument();
+  expect(screen.getByText("Fuse + rerank")).toBeInTheDocument();
+  expect(screen.queryByText("planned")).not.toBeInTheDocument();
 });
 
-test("the system section marks OpenSearch and Redis as planned and lists three rules", () => {
+test("the system section marks only Redis as planned and lists three rules", () => {
   render(<System stores={STORES} rules={RULES} />);
-  expect(within(itemWith("OpenSearch")).getByText("planned")).toBeInTheDocument();
+  expect(within(itemWith("OpenSearch")).queryByText("planned")).not.toBeInTheDocument();
   expect(within(itemWith("Redis")).getByText("planned")).toBeInTheDocument();
   expect(within(itemWith("PostgreSQL")).queryByText("planned")).not.toBeInTheDocument();
   expect(screen.getAllByText(/^Rule \d+$/)).toHaveLength(3);
 });
 
-test("the build log shows four phases, three of them planned", () => {
+test("the build log shows four phases, two of them planned", () => {
   render(<BuildLog phases={PHASES} />);
   expect(screen.getAllByRole("listitem")).toHaveLength(4);
-  expect(screen.getAllByText("planned")).toHaveLength(3);
+  expect(screen.getAllByText("planned")).toHaveLength(2);
   expect(within(itemWith("Foundation")).getByText("built")).toBeInTheDocument();
+  expect(within(itemWith("Advanced retrieval")).getByText("built")).toBeInTheDocument();
+});
+
+test("the measured section shows each configuration, the question count and its caveats", () => {
+  render(<Measured data={MEASURED} />);
+  const table = screen.getByRole("table");
+  // A header row and one row per configuration.
+  expect(within(table).getAllByRole("row")).toHaveLength(MEASURED.rows.length + 1);
+  expect(MEASURED.rows).toHaveLength(4);
+  expect(screen.getByText(new RegExp(`${MEASURED.questions} test questions`))).toBeInTheDocument();
+  expect(screen.getByText(/provisional/i)).toBeInTheDocument();
+  const served = within(table).getByText("served").closest("tr");
+  expect(served).toHaveTextContent("Hybrid + rerank");
+  expect(screen.getByRole("link", { name: /full results/i })).toHaveAttribute(
+    "href",
+    MEASURED.resultsUrl,
+  );
+  expect(MEASURED.resultsUrl).toMatch(/docs\/phase-2-evaluation\.md$/);
 });
 
 test("the ticker exposes each source type once to assistive technology", () => {

@@ -4,7 +4,7 @@ export default function BuildLog({ phases }: { phases: Phase[] }) {
   const built = phases.filter((phase) => phase.status === "live").length;
   return (
     <section id="build-log" className="l-section build-log">
-      <p className="label section-label">05 — Build log</p>
+      <p className="label section-label">06 — Build log</p>
       <h2 className="section-title">Built in order, reported as it stands.</h2>
       <div className="bl-rail" aria-hidden="true">
         <span data-anim="build-line" style={{ width: `${(built / phases.length) * 100}%` }} />

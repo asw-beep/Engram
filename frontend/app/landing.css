@@ -869,6 +869,105 @@ html.lenis body {
   }
 }
 
+/* Measured */
+
+.ms-frame {
+  max-width: 48rem;
+  margin-top: 2.5rem;
+  overflow-x: auto;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+}
+
+.ms-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.ms-table th,
+.ms-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--ink);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ms-table th:first-child {
+  text-align: left;
+}
+
+.ms-config {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.ms-table thead th {
+  color: var(--muted);
+  font-family: var(--font-code);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ms-table tbody th {
+  font-weight: 500;
+}
+
+.ms-table td {
+  font-family: var(--font-code);
+  font-size: 0.9375rem;
+}
+
+.ms-table tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
+.ms-served {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.ms-note {
+  max-width: 54ch;
+  margin-top: 1.25rem;
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+.ms-link {
+  display: inline-block;
+  margin-top: 1rem;
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 30rem) {
+  .ms-table th,
+  .ms-table td {
+    padding: 0.625rem 0.5rem;
+  }
+
+  .ms-table thead th {
+    font-size: 0.5625rem;
+    letter-spacing: 0.04em;
+  }
+
+  .ms-table td {
+    font-size: 0.8125rem;
+  }
+
+  .ms-config {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+  }
+}
+
 /* Set before first paint when motion is allowed, and cleared when the entrance starts. */
 .motion-pending .hero-line > span,
 .motion-pending .hero-kicker,

@@ -7,6 +7,7 @@ const SECTIONS = [
   { href: "#problem", label: "Problem" },
   { href: "#pipeline", label: "Pipeline" },
   { href: "#specimen", label: "Specimen" },
+  { href: "#measured", label: "Measured" },
   { href: "#system", label: "System" },
 ];
 

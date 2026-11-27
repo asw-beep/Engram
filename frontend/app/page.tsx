@@ -2,6 +2,7 @@ import BuildLog from "@/components/landing/BuildLog";
 import Closing from "@/components/landing/Closing";
 import Hero from "@/components/landing/Hero";
 import LandingMotion, { PENDING_SCRIPT } from "@/components/landing/LandingMotion";
+import Measured from "@/components/landing/Measured";
 import Nav from "@/components/landing/Nav";
 import Pipeline from "@/components/landing/Pipeline";
 import Problem from "@/components/landing/Problem";
@@ -12,6 +13,7 @@ import SmoothScroll from "@/components/motion/SmoothScroll";
 import {
   GITHUB_URL,
   INGESTION_STAGES,
+  MEASURED,
   PHASES,
   QUERY_STAGES,
   RULES,
@@ -34,6 +36,7 @@ export default function LandingPage() {
         <Problem />
         <Pipeline ingestion={INGESTION_STAGES} query={QUERY_STAGES} />
         <Specimen sample={SAMPLE} />
+        <Measured data={MEASURED} />
         <System stores={STORES} rules={RULES} />
         <BuildLog phases={PHASES} />
       </main>

@@ -35,7 +35,8 @@ test("a stage can be chosen from the keyboard", async () => {
 
 test("a stage that is not built says planned", () => {
   renderPipeline();
-  expect(within(screen.getByRole("button", { name: /Rerank/ })).getByText("planned")).toBeInTheDocument();
+  expect(within(screen.getByRole("button", { name: /Authenticate/ })).getByText("planned")).toBeInTheDocument();
+  expect(within(screen.getByRole("button", { name: /Rerank/ })).queryByText("planned")).not.toBeInTheDocument();
   expect(within(screen.getByRole("button", { name: /Chunk/ })).queryByText("planned")).not.toBeInTheDocument();
 });
 
