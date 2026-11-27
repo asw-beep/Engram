@@ -17,6 +17,10 @@ _MARKDOWN = MarkdownIt("commonmark")
 _HEADING_ANCHOR = re.compile(r"\s*\{#[\w.:-]+\}$")
 # The same line breaks markdown-it normalises, so line numbers agree with its token maps.
 _LINE_BREAK = re.compile(r"\r\n?|\n")
+# A Hugo shortcode tag on one line: {{< name args >}}, {{% name args %}} or a closing tag.
+_SHORTCODE = re.compile(r"\{\{<(.*?)>\}\}|\{\{%(.*?)%\}\}")
+_TEXT_ATTRIBUTE = re.compile(r"""\btext=(?:"([^"]*)"|'([^']*)')""")
+_FENCE = re.compile(r"^\s*(`{3,}|~{3,})")
 
 
 @dataclass(frozen=True)
@@ -32,7 +36,7 @@ def parse_markdown(content: bytes) -> ParsedDocument:
     except UnicodeDecodeError as error:
         raise ParseError("not valid UTF-8") from error
 
-    lines = _blank_front_matter(_LINE_BREAK.split(text))
+    lines = _strip_shortcodes(_blank_front_matter(_LINE_BREAK.split(text)))
     headings = _headings(lines)
     first_heading = headings[0].line if headings else len(lines)
     sections = [_section((), lines, 0, 0, first_heading)]
@@ -50,6 +54,34 @@ def _blank_front_matter(lines: list[str]) -> list[str]:
         if lines[index].rstrip() in ("---", "..."):
             return [""] * (index + 1) + lines[index + 1 :]
     return lines
+
+
+def _strip_shortcodes(lines: list[str]) -> list[str]:
+    """Remove Hugo shortcode tags outside code fences, keeping a `text` attribute's value.
+
+    Each line is rewritten in place, so line numbers still refer to the original file.
+    Shortcodes inside a fence are the content being shown, so they stay.
+    """
+    result = []
+    fence = ""
+    for line in lines:
+        marker = _FENCE.match(line)
+        if fence:
+            if marker and marker.group(1)[0] == fence[0] and len(marker.group(1)) >= len(fence):
+                if not line.strip().lstrip(fence[0]):
+                    fence = ""
+            result.append(line)
+        elif marker:
+            fence = marker.group(1)
+            result.append(line)
+        else:
+            result.append(_SHORTCODE.sub(_shortcode_text, line))
+    return result
+
+
+def _shortcode_text(match: re.Match[str]) -> str:
+    text = _TEXT_ATTRIBUTE.search(match.group(1) or match.group(2) or "")
+    return (text.group(1) if text.group(1) is not None else text.group(2)) if text else ""
 
 
 def _headings(lines: list[str]) -> list[_Heading]:
