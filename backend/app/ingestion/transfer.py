@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 
 from app.config import Settings
 from app.db.constants import JobStatus
+from app.db.keyword_index import KeywordIndex
 from app.db.models import Chunk, DocumentVersion, IngestionJob
 from app.db.vector_index import VectorIndex
 from app.embedding.base import embedding_text
@@ -59,11 +60,16 @@ def export_chunks(session: Session, job_id: UUID, out_path: Path, settings: Sett
 
 
 def import_vectors(
-    session: Session, job_id: UUID, in_dir: Path, index: VectorIndex, settings: Settings
+    session: Session,
+    job_id: UUID,
+    in_dir: Path,
+    index: VectorIndex,
+    keyword_index: KeywordIndex,
+    settings: Settings,
 ) -> None:
     """Check the folder against the job, publish every waiting version, then finish the job.
 
-    Everything is checked before anything is written to Qdrant.
+    Everything is checked before anything is written to Qdrant or the keyword index.
     """
     job = _waiting_job(session, job_id)
     in_dir = Path(in_dir)
@@ -116,6 +122,7 @@ def import_vectors(
                 version,
                 version_vectors,
                 index,
+                keyword_index,
                 settings.embedding_model_id,
                 retry_wait=settings.retry_wait_seconds,
             )

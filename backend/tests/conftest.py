@@ -200,13 +200,14 @@ def fake_github():
 
 
 @pytest.fixture
-def deps(session_factory, store, settings, index, fake_github):
+def deps(session_factory, store, settings, index, keyword_index, fake_github):
     """The production connector dispatch, with GitHub answered by fake_github."""
     return IngestionDeps(
         session_factory=session_factory,
         file_store=store,
         embedder=FakeEmbedder(),
         index=index,
+        keyword_index=keyword_index,
         connector_for=make_connector_for(store, fake_github.client(), settings),
         settings=settings,
     )
@@ -241,15 +242,18 @@ def _upload_job(session, input):
 
 @pytest.fixture
 def ingest(session, store, deps):
-    """Save the files, run a job for them on the default upload source, return it refreshed."""
+    """Save the files, run a job for them on the default upload source, return it refreshed.
 
-    def run(files, defer_embedding=False):
+    Keyword arguments replace those fields of deps for this run, such as keyword_index.
+    """
+
+    def run(files, defer_embedding=False, **overrides):
         uploads = [
             {"path": path, "storage_key": store.put(DEFAULT_TENANT_ID, content)}
             for path, content in files.items()
         ]
         job = _upload_job(session, {"uploads": uploads, "defer_embedding": defer_embedding})
-        run_ingestion(job.id, deps)
+        run_ingestion(job.id, replace(deps, **overrides))
         session.refresh(job)
         return job
 
@@ -381,6 +385,11 @@ def keyword_index(opensearch_client):
     """
     keyword_index = KeywordIndex(opensearch_client, f"chunks_test_{uuid4().hex}")
     keyword_index.ensure_index()
+    # Upserts wait for the next refresh, every second by default; a shorter interval only
+    # makes them return sooner.
+    opensearch_client.indices.put_settings(
+        index=keyword_index.index, body={"index": {"refresh_interval": "50ms"}}
+    )
     yield keyword_index
     opensearch_client.indices.delete(index=keyword_index.index, ignore_unavailable=True)
 

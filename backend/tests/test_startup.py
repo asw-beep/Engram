@@ -1,8 +1,11 @@
 import threading
 from dataclasses import replace
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
+from opensearchpy import OpenSearch
 
+from app.db.keyword_index import KeywordIndex
 from app.main import create_app
 from tests.fakes import FakeEmbedder
 
@@ -46,3 +49,20 @@ def test_a_failed_model_load_at_startup_does_not_stop_the_app(settings, services
     with TestClient(app) as client:
         assert embedder.loaded.wait(timeout=5)
         assert client.get("/api/health").status_code == 200
+
+
+def test_startup_creates_a_missing_keyword_index(settings, services, opensearch_client):
+    missing = KeywordIndex(opensearch_client, f"chunks_test_{uuid4().hex}")
+    try:
+        with TestClient(create_app(settings, replace(services, keyword_index=missing))):
+            assert opensearch_client.indices.exists(index=missing.index)
+    finally:
+        opensearch_client.indices.delete(index=missing.index, ignore_unavailable=True)
+
+
+def test_an_unreachable_keyword_index_does_not_stop_startup(settings, services):
+    broken = KeywordIndex(
+        OpenSearch(hosts=["http://127.0.0.1:1"], timeout=2, max_retries=0), "unreachable"
+    )
+    with TestClient(create_app(settings, replace(services, keyword_index=broken))) as client:
+        assert client.get("/api/health").status_code == 503

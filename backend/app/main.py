@@ -31,6 +31,11 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
         except Exception:
             # Keep starting, so /api/health can report that Qdrant is unavailable.
             logger.warning("Could not prepare the Qdrant collection at startup", exc_info=True)
+        try:
+            services.keyword_index.ensure_index()
+        except Exception:
+            # Keep starting, so /api/health can report that OpenSearch is unavailable.
+            logger.warning("Could not prepare the keyword index at startup", exc_info=True)
         if settings.preload_embedding_model:
             threading.Thread(
                 target=_load_model, args=(services.embedder,), name="model-load", daemon=True

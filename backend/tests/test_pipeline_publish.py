@@ -1,6 +1,10 @@
+from uuid import UUID
+
 from sqlalchemy import select
 
+from app.api.deps import get_current_tenant
 from app.db.models import Chunk, Document
+from tests.fakes import FailingKeywordIndex
 
 
 def current_version(session, path):
@@ -56,3 +60,85 @@ def test_deferring_a_previously_published_version_marks_its_chunks_waiting(sessi
         select(Chunk.embedded_at).where(Chunk.document_version_id == first)
     ).all()
     assert embedded_at == [None]
+
+
+def keyword_entries(keyword_index):
+    """Every entry in the keyword index, by chunk ID."""
+    response = keyword_index.client.search(
+        index=keyword_index.index, body={"query": {"match_all": {}}, "size": 100}
+    )
+    return {UUID(hit["_id"]): hit["_source"] for hit in response["hits"]["hits"]}
+
+
+def test_publishing_saves_the_chunk_text_to_the_keyword_index(session, ingest, keyword_index):
+    ingest({"guide.md": b"# Setup\n## Install\nRun the installer twice.\n"})
+    chunk = session.scalars(select(Chunk)).one()
+    document = session.scalars(select(Document)).one()
+    assert keyword_entries(keyword_index) == {
+        chunk.id: {
+            "content": chunk.content,
+            "headings": "Setup > Install",
+            "tenant_id": str(document.tenant_id),
+            "document_id": str(document.id),
+            "document_version_id": str(document.current_version_id),
+            "allowed_principals": list(document.allowed_principals),
+        }
+    }
+    hits = keyword_index.search("installer", get_current_tenant(), 10)
+    assert [chunk_id for chunk_id, _ in hits] == [chunk.id]
+
+
+def test_a_failed_keyword_upsert_keeps_the_old_version_and_retry_finishes(
+    session, ingest, retry, index, keyword_index
+):
+    ingest({"guide.md": b"# A\nold\n"})
+    old = current_version(session, "guide.md")
+    job = ingest({"guide.md": b"# A\nnew\n"}, keyword_index=FailingKeywordIndex())
+    assert job.status == "failed"
+    assert job.errors == [
+        {"path": "guide.md", "reason": "could not save text to the keyword index"}
+    ]
+    assert current_version(session, "guide.md") == old
+    assert [entry["document_version_id"] for entry in keyword_entries(keyword_index).values()] == [
+        str(old)
+    ]
+    assert retry(job).status == "succeeded"
+    assert current_version(session, "guide.md") != old
+    assert index.count() == 1 and keyword_index.count() == 1
+
+
+def test_a_new_version_replaces_the_old_text_in_the_keyword_index(session, ingest, keyword_index):
+    ingest({"guide.md": b"# A\nold\n"})
+    ingest({"guide.md": b"# A\nnew\n"})
+    new = current_version(session, "guide.md")
+    assert [entry["document_version_id"] for entry in keyword_entries(keyword_index).values()] == [
+        str(new)
+    ]
+
+
+def test_a_failed_keyword_delete_still_publishes_and_clears_qdrant(
+    session, ingest, index, keyword_index, monkeypatch
+):
+    ingest({"guide.md": b"# A\nold\n"})
+    old = current_version(session, "guide.md")
+
+    def refuse(version_id):
+        raise ConnectionError("OpenSearch is unavailable (test)")
+
+    monkeypatch.setattr(keyword_index, "delete_version", refuse)
+    job = ingest({"guide.md": b"# A\nnew\n"})
+    assert job.status == "succeeded" and current_version(session, "guide.md") != old
+    assert index.count() == 1
+
+
+def test_a_failed_qdrant_delete_still_clears_the_keyword_index(
+    session, ingest, index, keyword_index, monkeypatch
+):
+    ingest({"guide.md": b"# A\nold\n"})
+
+    def refuse(version_id):
+        raise ConnectionError("Qdrant is unavailable (test)")
+
+    monkeypatch.setattr(index, "delete_version", refuse)
+    job = ingest({"guide.md": b"# A\nnew\n"})
+    assert job.status == "succeeded" and keyword_index.count() == 1

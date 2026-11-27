@@ -78,6 +78,11 @@ class IndexedText:
     allowed_principals: list[str]
 
 
+def heading_text(heading_path: list[str] | tuple[str, ...]) -> str:
+    """The headings field: the chunk's heading path, outermost first, as embedding text has it."""
+    return " > ".join(heading_path)
+
+
 def is_transient_opensearch_error(error: Exception) -> bool:
     """Connection failures, timeouts, 429 and 5xx; worth retrying."""
     if isinstance(error, OpenSearchConnectionError | ConnectionError | TimeoutError):

@@ -6,10 +6,12 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+from opensearchpy import OpenSearch
 from qdrant_client import QdrantClient
 
 from app.config import Settings
 from app.db.base import build_session_factory
+from app.db.keyword_index import KeywordIndex
 from app.db.models import IngestionJob, Source
 from app.db.vector_index import VectorIndex
 from app.embedding.bge_m3 import BgeM3Embedder
@@ -59,6 +61,9 @@ def build_services(settings: Settings) -> Services:
         settings.qdrant_collection,
         settings.embedding_dimension,
     )
+    keyword_index = KeywordIndex(
+        OpenSearch(hosts=[settings.opensearch_url], timeout=30), settings.opensearch_index
+    )
     http = httpx.Client()
 
     def provider(model: str, structured: bool) -> OpenRouterProvider:
@@ -75,6 +80,7 @@ def build_services(settings: Settings) -> Services:
         file_store=file_store,
         embedder=embedder,
         index=index,
+        keyword_index=keyword_index,
         connector_for=make_connector_for(file_store, httpx.Client(timeout=30.0), settings),
         settings=settings,
         retriever=DenseRetriever(embedder, index),

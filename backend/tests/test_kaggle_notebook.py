@@ -116,7 +116,7 @@ def test_wrong_vector_length_stops_the_run(tmp_path, notebook, chunks_file):
 
 
 def test_export_notebook_import_round_trip(
-    session, deferred_job, notebook, index, settings, tmp_path
+    session, deferred_job, notebook, index, keyword_index, settings, tmp_path
 ):
     chunks = tmp_path / "chunks.jsonl"
     export_chunks(session, deferred_job.id, chunks, settings)
@@ -127,6 +127,6 @@ def test_export_notebook_import_round_trip(
         return embedder.embed_passages(texts, 8)
 
     notebook.run(chunks, out, encode, shard_size=1000, done_dirs=[out])
-    import_vectors(session, deferred_job.id, out, index, settings)
+    import_vectors(session, deferred_job.id, out, index, keyword_index, settings)
     session.refresh(deferred_job)
     assert deferred_job.status == "succeeded" and index.count() == 1

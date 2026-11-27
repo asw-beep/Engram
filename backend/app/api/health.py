@@ -14,6 +14,8 @@ def _stores_available(request: Request) -> bool:
         with services.session_factory() as session:
             session.execute(text("SELECT 1"))
         services.index.client.get_collections()
+        if not services.keyword_index.ping():
+            raise ConnectionError("OpenSearch did not answer a ping")
     except Exception:
         logger.warning("Health check failed", exc_info=True)
         return False

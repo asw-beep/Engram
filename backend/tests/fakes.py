@@ -37,6 +37,13 @@ class FakeEmbedder:
         return [value / norm for value in vector]
 
 
+class FailingKeywordIndex:
+    """A keyword index that rejects every upsert, as OpenSearch refusing a bulk request would."""
+
+    def upsert(self, items) -> None:
+        raise RuntimeError("OpenSearch rejected the bulk request (test)")
+
+
 class FailingConnector:
     """Fails to list its items with a message meant for the user."""
 

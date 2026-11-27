@@ -15,6 +15,12 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import Settings
 from app.db.constants import OPEN_JOB_STATUSES, JobStatus
+from app.db.keyword_index import (
+    IndexedText,
+    KeywordIndex,
+    heading_text,
+    is_transient_opensearch_error,
+)
 from app.db.models import Chunk, Document, DocumentVersion, IngestionJob, Source
 from app.db.vector_index import IndexedPoint, VectorIndex, is_transient_qdrant_error
 from app.embedding.base import Embedder, EmbeddingOutOfMemory, embedding_text
@@ -41,6 +47,7 @@ class IngestionDeps:
     file_store: FileStore
     embedder: Embedder
     index: VectorIndex
+    keyword_index: KeywordIndex
     connector_for: Callable[[Source, IngestionJob], Connector]
     settings: Settings
 
@@ -64,26 +71,57 @@ def publish_version(
     version: DocumentVersion,
     vectors: dict[UUID, list[float]],
     index: VectorIndex,
+    keyword_index: KeywordIndex,
     model_id: str,
     retry_wait: float = 1.0,
 ) -> None:
-    """Spec step 7: add the version's points, make it current, then drop the old points."""
+    """Spec step 7: add the version to Qdrant and OpenSearch, make it current, then drop the
+    old version from both.
+
+    Either upsert failing raises PublishError before the version becomes current, so the old
+    one stays searchable. Entries already written for the new version are harmless: search
+    rechecks the current version, and a retry overwrites them under the same chunk IDs.
+    """
     document = session.get(Document, version.document_id)
-    chunk_ids = session.scalars(
-        select(Chunk.id).where(Chunk.document_version_id == version.id).order_by(Chunk.position)
+    chunks = session.scalars(
+        select(Chunk).where(Chunk.document_version_id == version.id).order_by(Chunk.position)
     ).all()
+    principals = list(document.allowed_principals)
     points = [
         IndexedPoint(
-            chunk_id=chunk_id,
-            vector=vectors[chunk_id],
+            chunk_id=chunk.id,
+            vector=vectors[chunk.id],
             tenant_id=version.tenant_id,
             document_id=document.id,
             document_version_id=version.id,
-            allowed_principals=list(document.allowed_principals),
+            allowed_principals=principals,
         )
-        for chunk_id in chunk_ids
+        for chunk in chunks
     ]
-    retry_transient(lambda: index.upsert(points), is_transient_qdrant_error, wait_base=retry_wait)
+    texts = [
+        IndexedText(
+            chunk_id=chunk.id,
+            content=chunk.content,
+            headings=heading_text(chunk.heading_path),
+            tenant_id=version.tenant_id,
+            document_id=document.id,
+            document_version_id=version.id,
+            allowed_principals=principals,
+        )
+        for chunk in chunks
+    ]
+    try:
+        retry_transient(
+            lambda: index.upsert(points), is_transient_qdrant_error, wait_base=retry_wait
+        )
+    except Exception as error:
+        raise PublishError("could not save vectors to Qdrant") from error
+    try:
+        retry_transient(
+            lambda: keyword_index.upsert(texts), is_transient_opensearch_error, wait_base=retry_wait
+        )
+    except Exception as error:
+        raise PublishError("could not save text to the keyword index") from error
 
     old_version_id = document.current_version_id
     document.current_version_id = version.id
@@ -95,17 +133,25 @@ def publish_version(
     session.commit()
 
     if old_version_id is not None and old_version_id != version.id:
-        try:
-            retry_transient(
-                lambda: index.delete_version(old_version_id),
-                is_transient_qdrant_error,
-                wait_base=retry_wait,
-            )
-        except Exception:
-            # Search rechecks the current version, so stale points are never shown.
-            logger.warning(
-                "Could not remove points of old version %s", old_version_id, exc_info=True
-            )
+        # Search rechecks the current version, so stale entries are never shown, and each
+        # store is cleared on its own so one being down doesn't leave the other stale.
+        for store, remove, is_transient in (
+            ("Qdrant", index.delete_version, is_transient_qdrant_error),
+            ("the keyword index", keyword_index.delete_version, is_transient_opensearch_error),
+        ):
+            try:
+                retry_transient(
+                    lambda remove=remove: remove(old_version_id),
+                    is_transient,
+                    wait_base=retry_wait,
+                )
+            except Exception:
+                logger.warning(
+                    "Could not remove old version %s from %s",
+                    old_version_id,
+                    store,
+                    exc_info=True,
+                )
 
 
 def _claim(session: Session, job_id: UUID) -> IngestionJob | None:
@@ -255,12 +301,16 @@ def _embed_and_publish(session: Session, version_id: UUID, deps: IngestionDeps) 
             version,
             {chunk.id: vector for chunk, vector in zip(chunks, vectors, strict=True)},
             deps.index,
+            deps.keyword_index,
             deps.embedder.model_id,
             retry_wait=deps.settings.retry_wait_seconds,
         )
+    except PublishError:
+        logger.warning("Publishing version %s failed", version_id, exc_info=True)
+        raise
     except Exception as error:
         logger.warning("Publishing version %s failed", version_id, exc_info=True)
-        raise PublishError("could not save vectors to Qdrant") from error
+        raise PublishError("could not make the new version current") from error
 
 
 def _mark_waiting(session: Session, version_id: UUID, job_id: UUID) -> None:
