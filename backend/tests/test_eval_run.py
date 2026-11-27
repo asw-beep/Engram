@@ -18,6 +18,7 @@ def _row(qid, top, *ranked, latency=10):
         "ranked": [{"path": p, "headings": list(h), "score": top} for p, h in ranked],
         "top_score": top,
         "latency_ms": latency,
+        "outside": [],
     }
 
 
@@ -91,3 +92,57 @@ def test_report_lists_missing_configurations_as_not_run(tmp_path):
     assert "| hybrid | not run |" in text and "| hybrid_rerank | not run |" in text
     assert "Provisional" in text
     json.dumps(result)  # result files must stay plain JSON
+
+
+def _result(recall=0.5, corpus=None, settings=None, cutoff_from="configured"):
+    summary = summarise(PER_QUESTION, QUESTIONS, cutoff=0.5)
+    summary["overall"]["recall@5"] = recall
+    return {
+        "config": "dense",
+        "corpus": corpus or {"documents": 3, "chunks": 9},
+        "settings": settings or {},
+        "cutoff_from": cutoff_from,
+        "summary": summary,
+    }
+
+
+def test_a_target_is_not_called_met_before_the_owner_review():
+    provisional = render({"dense": _result(recall=0.9)}, QUESTIONS, reviewed=False)
+    reviewed = render({"dense": _result(recall=0.9)}, QUESTIONS, reviewed=True)
+    assert "met (" not in provisional and "provisional (0.900)" in provisional
+    assert "met (0.900)" in reviewed
+
+
+def test_the_report_says_whether_the_cutoff_was_calibrated():
+    configured = render({"dense": _result()}, QUESTIONS, reviewed=False)
+    calibrated = render({"dense": _result(cutoff_from="calibrated on dev")}, QUESTIONS, False)
+    assert "| dense | 0.500 | configured |" in configured
+    assert "| dense | 0.500 | calibrated on dev |" in calibrated
+
+
+def test_the_report_computes_the_exact_term_share_and_review_state():
+    provisional = render({"dense": _result()}, QUESTIONS, reviewed=False)
+    reviewed = render({"dense": _result()}, QUESTIONS, reviewed=True)
+    assert "33% of the answerable questions use exact terms" in provisional
+    assert "hasn't reviewed" in provisional and "The owner reviewed a sample" in reviewed
+
+
+def test_the_report_names_the_recorded_device():
+    text = render({"dense": _result(settings={"embedding_device": "cuda"})}, QUESTIONS, False)
+    assert "| `cuda` |" in text
+    assert "not recorded" in render({"dense": _result()}, QUESTIONS, reviewed=False)
+
+
+def test_the_report_flags_runs_made_on_different_corpora():
+    results = {
+        "dense": _result(corpus={"documents": 3, "chunks": 9}),
+        "hybrid": {**_result(corpus={"documents": 3, "chunks": 12}), "config": "hybrid"},
+    }
+    assert "different corpora" in render(results, QUESTIONS, reviewed=False)
+    assert "different corpora" not in render({"dense": _result()}, QUESTIONS, reviewed=False)
+
+
+def test_a_row_without_its_outside_set_is_rejected():
+    stale = [{k: v for k, v in row.items() if k != "outside"} for row in PER_QUESTION]
+    with pytest.raises(ValueError, match="k-1"):
+        summarise(stale, QUESTIONS, cutoff=0.5)

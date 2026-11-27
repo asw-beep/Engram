@@ -49,6 +49,7 @@ RECORDED = (
     "dense_min_score",
     "rerank_min_score",
     "embedding_model_id",
+    "embedding_device",
     "embedding_model_revision",
     "reranker_model_id",
     "reranker_model_revision",
@@ -157,8 +158,12 @@ def _ranked(row: dict) -> list[Ranked]:
     return [Ranked(item["path"], tuple(item["headings"])) for item in row["ranked"]]
 
 
-def _outside(row: dict) -> Collection[str] | None:
-    return set(row["outside"]) if "outside" in row else None
+def _outside(row: dict) -> Collection[str]:
+    # Without it NDCG would assume every gold document has more text, so a stale result
+    # file must be regenerated rather than scored by a different rule.
+    if "outside" not in row:
+        raise ValueError(f"result row {row['id']} has no outside set; rerun eval.run")
+    return set(row["outside"])
 
 
 def _gate(answerable: list, unanswerable: list, cutoff: float) -> dict:
@@ -230,6 +235,8 @@ def main(argv: list[str] | None = None) -> int:
             key: getattr(settings, key) for key in RECORDED if key in type(settings).model_fields
         },
         "corpus": corpus,
+        # Task 9 replaces this with a cutoff calibrated on the dev split.
+        "cutoff_from": "configured",
         "per_question": per_question,
         "summary": summarise(per_question, questions, cutoff),
     }

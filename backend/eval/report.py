@@ -26,7 +26,7 @@ LATENCY_TARGET_MS = 5000
 def render(results: dict[str, dict], questions: list[Question], reviewed: bool) -> str:
     parts = [_heading(reviewed), _dataset(results, questions), _quality(results)]
     parts += [_by_kind(results, questions), _gate(results), _latency(results)]
-    parts += [_targets(results), _limits()]
+    parts += [_targets(results, reviewed), _limits(questions, reviewed)]
     return "\n\n".join(parts) + "\n"
 
 
@@ -54,13 +54,23 @@ def _dataset(results: dict[str, dict], questions: list[Question]) -> str:
         for kind in KINDS
         if counts[kind, "dev"] or counts[kind, "test"]
     ]
-    corpus = next((r["corpus"] for r in results.values() if "corpus" in r), None)
+    corpora = {config: r["corpus"] for config, r in results.items() if "corpus" in r}
+    corpus = next(iter(corpora.values()), None)
     corpus_line = (
         f"The corpus held {corpus['documents']} current documents and {corpus['chunks']} chunks "
         "when the first listed run was made."
         if corpus
         else "No run has been made, so the corpus size isn't recorded."
     )
+    if any(other != corpus for other in corpora.values()):
+        sizes = ", ".join(
+            f"{config} {c['documents']} documents and {c['chunks']} chunks"
+            for config, c in corpora.items()
+        )
+        corpus_line += (
+            f" **Warning:** the runs were made on different corpora ({sizes}), so their "
+            "numbers can't be compared. Rerun them on one corpus."
+        )
     return (
         "## Dataset\n\n"
         f"{len(questions)} questions, written for this project by its author from the corpus "
@@ -122,21 +132,25 @@ def _gate(results: dict[str, dict]) -> str:
     for config in CONFIGS:
         gate = _summary(results, config).get("evidence_gate")
         if config not in results:
-            rows.append(f"| {config} | not run | – | – | – |")
+            rows.append(f"| {config} | not run | – | – | – | – |")
         else:
-            cells = [
-                _num(gate, key) for key in ("cutoff", "answerable_passed", "unanswerable_refused")
-            ]
+            source = results[config].get("cutoff_from", "not recorded")
+            cells = [_num(gate, key) for key in ("answerable_passed", "unanswerable_refused")]
             rows.append(
-                f"| {config} | " + " | ".join(cells) + f" | {_num(gate, 'balanced_accuracy')} |"
+                f"| {config} | {_num(gate, 'cutoff')} | {source} | "
+                + " | ".join(cells)
+                + f" | {_num(gate, 'balanced_accuracy')} |"
             )
     return (
         "## Evidence gate (test split)\n\n"
-        "| Configuration | Cutoff | Answerable passed | Unanswerable refused | "
-        "Balanced accuracy |\n|---|---:|---:|---:|---:|\n" + "\n".join(rows) + "\n\n"
+        "| Configuration | Cutoff | Cutoff from | Answerable passed | Unanswerable refused | "
+        "Balanced accuracy |\n|---|---:|---|---:|---:|---:|\n" + "\n".join(rows) + "\n\n"
         "A question passes when its highest passage score is at or above the cutoff, the rule "
-        "`answer_question` applies. Balanced accuracy is the mean of the two shares. Cutoffs "
-        "are chosen on the `dev` split only."
+        "`answer_question` applies. This is the score gate only: the API also refuses when "
+        "every passage above the cutoff is too large for the context budget, which the harness "
+        "doesn't model. Balanced accuracy is the mean of the two shares. A `configured` "
+        "cutoff is the `evidence_min_score` setting, not tuned on this dataset; a calibrated "
+        "one was chosen on the `dev` split only."
     )
 
 
@@ -145,23 +159,33 @@ def _latency(results: dict[str, dict]) -> str:
     for config in CONFIGS:
         latency = _summary(results, config).get("latency_ms")
         if config not in results:
-            rows.append(f"| {config} | not run | – |")
+            rows.append(f"| {config} | not run | – | – |")
         else:
-            rows.append(f"| {config} | {_ms(latency, 'median')} | {_ms(latency, 'p95')} |")
+            device = (results[config].get("settings") or {}).get("embedding_device")
+            where = f"`{device}`" if device else "not recorded"
+            rows.append(
+                f"| {config} | {_ms(latency, 'median')} | {_ms(latency, 'p95')} | {where} |"
+            )
     return (
         "## Retrieval latency (test split)\n\n"
-        "| Configuration | Median (ms) | p95 (ms) |\n|---|---:|---:|\n" + "\n".join(rows) + "\n\n"
+        "| Configuration | Median (ms) | p95 (ms) | Embedding device |\n|---|---:|---:|---|\n"
+        + "\n".join(rows)
+        + "\n\n"
         "Retrieval only, from the question to ranked passages, with the models already "
-        "loaded, on the development laptop's GPU. Generation isn't included."
+        "loaded, on the machine that ran `eval.run`, not the production server. Generation "
+        "isn't included."
     )
 
 
-def _targets(results: dict[str, dict]) -> str:
+def _targets(results: dict[str, dict], reviewed: bool) -> str:
     cells = []
     for config in CONFIGS:
         overall = _summary(results, config).get("overall")
         if config not in results or not overall:
             cells.append("not run")
+        elif not reviewed:
+            # Until the owner has reviewed the sample, no number counts as a result.
+            cells.append(f"provisional ({overall['recall@5']:.3f})")
         else:
             met = "met" if overall["recall@5"] >= RECALL_TARGET else "missed"
             cells.append(f"{met} ({overall['recall@5']:.3f})")
@@ -169,6 +193,8 @@ def _targets(results: dict[str, dict]) -> str:
         "## Plan.md §10.5 targets\n\n"
         "| Target | " + " | ".join(CONFIGS) + " |\n|---|---|---|---|\n"
         f"| Recall@5 ≥ {RECALL_TARGET:.0%} | " + " | ".join(cells) + " |\n\n"
+        "A target is called met or missed only once the owner has reviewed the question "
+        "sample. "
         f"The query latency target (p95 under {LATENCY_TARGET_MS // 1000} seconds) covers the "
         "whole answer, including generation, so this phase can't report it as met or missed: "
         "the retrieval part is in the latency table above, and end-to-end latency on the "
@@ -177,17 +203,24 @@ def _targets(results: dict[str, dict]) -> str:
     )
 
 
-def _limits() -> str:
+def _limits(questions: list[Question], reviewed: bool) -> str:
+    answerable = [q for q in questions if q.kind != "unanswerable"]
+    exact = sum(q.kind == "exact_term" for q in answerable) / len(answerable) if answerable else 0
+    review = (
+        "The owner reviewed a sample of them and their gold labels."
+        if reviewed
+        else "The owner hasn't reviewed a sample of them yet."
+    )
     return (
         "## Limits\n\n"
         "- The questions were written by the project's author, who also built the system, so "
-        "they may favour it. Gold labels name sections rather than chunks, a third of the "
-        "questions use exact terms, and the owner reviews a sample.\n"
+        "they may favour it. Gold labels name sections rather than chunks, and "
+        f"{exact:.0%} of the answerable questions use exact terms. {review}\n"
         "- One corpus: the English Kubernetes concepts pages. Nothing here says how retrieval "
         "does on code, OpenAPI specs or incident reports.\n"
         "- Relevance is judged by section. A chunk in the right section counts even when it "
         "isn't the passage that answers the question.\n"
-        "- Latency is from a laptop GPU, not the production server."
+        "- Latency is from the machine that ran the harness, not the production server."
     )
 
 
